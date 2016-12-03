@@ -12,6 +12,7 @@ func main() {
 	scanner.Split(bufio.ScanRunes)
 
 	floor := 0
+	charPos := 1
 
 	for scanner.Scan() {
 		switch t := scanner.Text(); t {
@@ -22,6 +23,11 @@ func main() {
 		default:
 			fmt.Println("Unexpected character in input:", t)
 		}
+		if floor < 0 {
+			fmt.Println("Entered basement at position:", charPos)
+			break
+		}
+		charPos += 1
 	}
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)

@@ -1,11 +1,12 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"log"
 	"os"
 	"sort"
+
+	"github.com/alext/aoc/2015/helpers"
 )
 
 type Present []int
@@ -29,24 +30,19 @@ func (p Present) String() string {
 }
 
 func main() {
-	scanner := bufio.NewScanner(os.Stdin)
-
 	totalArea := 0
 	totalRibbon := 0
 
-	for scanner.Scan() {
+	helpers.ScanLines(os.Stdin, func(line string) {
 		var dims [3]int
-		_, err := fmt.Sscanf(scanner.Text(), "%dx%dx%d", &dims[0], &dims[1], &dims[2])
+		_, err := fmt.Sscanf(line, "%dx%dx%d", &dims[0], &dims[1], &dims[2])
 		if err != nil {
 			log.Fatal(err)
 		}
 		p := NewPresent(dims[0], dims[1], dims[2])
 		totalArea += p.Area()
 		totalRibbon += p.Ribon()
-	}
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
-	}
+	})
 	fmt.Println("Total area:", totalArea)
 	fmt.Println("Total ribon:", totalRibbon)
 }

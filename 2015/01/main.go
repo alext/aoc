@@ -1,21 +1,18 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
-	"log"
 	"os"
+
+	"github.com/alext/aoc/2015/helpers"
 )
 
 func main() {
-	scanner := bufio.NewScanner(os.Stdin)
-	scanner.Split(bufio.ScanRunes)
-
 	floor := 0
 	charPos := 1
 
-	for scanner.Scan() {
-		switch t := scanner.Text(); t {
+	helpers.ScanRunes(os.Stdin, func(t string) {
+		switch t {
 		case "(":
 			floor += 1
 		case ")":
@@ -25,12 +22,9 @@ func main() {
 		}
 		if floor < 0 {
 			fmt.Println("Entered basement at position:", charPos)
-			break
+			os.Exit(0)
 		}
 		charPos += 1
-	}
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
-	}
+	})
 	fmt.Println("Final floor:", floor)
 }

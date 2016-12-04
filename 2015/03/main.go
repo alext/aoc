@@ -1,10 +1,10 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
-	"log"
 	"os"
+
+	"github.com/alext/aoc/2015/helpers"
 )
 
 type House struct {
@@ -13,23 +13,20 @@ type House struct {
 }
 
 func main() {
-	scanner := bufio.NewScanner(os.Stdin)
-	scanner.Split(bufio.ScanRunes)
-
 	deliveries := make(map[House]int)
 	santaPos := House{0, 0}
 	roboPos := House{0, 0}
 	deliveries[santaPos] = 2
 	santasTurn := true
 
-	for scanner.Scan() {
+	helpers.ScanRunes(os.Stdin, func(t string) {
 		var current House
 		if santasTurn {
 			current = santaPos
 		} else {
 			current = roboPos
 		}
-		switch t := scanner.Text(); t {
+		switch t {
 		case ">":
 			current.X += 1
 		case "<":
@@ -40,7 +37,7 @@ func main() {
 			current.Y -= 1
 		default:
 			fmt.Println("Unexpected char in input:", t)
-			continue
+			return
 		}
 		if _, ok := deliveries[current]; ok {
 			deliveries[current] += 1
@@ -53,10 +50,7 @@ func main() {
 			roboPos = current
 		}
 		santasTurn = !santasTurn
-	}
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
-	}
+	})
 
 	fmt.Println("Houses visited:", len(deliveries))
 }

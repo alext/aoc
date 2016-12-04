@@ -4,14 +4,15 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"strings"
 
 	"github.com/alext/aoc/2015/helpers"
+	"github.com/glenn-brown/golang-pkg-pcre/src/pkg/pcre"
 )
 
 var (
-	threeVowels = regexp.MustCompile(`[aeiou].*[aeiou].*[aeiou]`)
-	badOnes     = regexp.MustCompile(`ab|cd|pq|xy`)
+	threeVowels  = regexp.MustCompile(`[aeiou].*[aeiou].*[aeiou]`)
+	doubleLetter = pcre.MustCompile(`([a-z])\1`, 0)
+	badOnes      = regexp.MustCompile(`ab|cd|pq|xy`)
 )
 
 func niceString(str string) bool {
@@ -19,20 +20,12 @@ func niceString(str string) bool {
 		fmt.Println("No 3 vowels:", str)
 		return false
 	}
-	if badOnes.MatchString(str) {
-		fmt.Println("Bad tuples:", str)
+	if !doubleLetter.MatcherString(str, 0).Matches() {
+		fmt.Println("No double letter:", str)
 		return false
 	}
-	prev := "."
-	doubleLetter := false
-	helpers.ScanRunes(strings.NewReader(str), func(c string) {
-		if c == prev {
-			doubleLetter = true
-		}
-		prev = c
-	})
-	if !doubleLetter {
-		fmt.Println("No double letter:", str)
+	if badOnes.MatchString(str) {
+		fmt.Println("Bad tuples:", str)
 		return false
 	}
 	return true

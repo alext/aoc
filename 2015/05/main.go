@@ -13,19 +13,18 @@ var (
 	threeVowels  = regexp.MustCompile(`[aeiou].*[aeiou].*[aeiou]`)
 	doubleLetter = pcre.MustCompile(`([a-z])\1`, 0)
 	badOnes      = regexp.MustCompile(`ab|cd|pq|xy`)
+
+	letterPairs    = pcre.MustCompile(`([a-z]{2}).*\1`, 0)
+	repeatedLetter = pcre.MustCompile(`([a-z]).\1`, 0)
 )
 
 func niceString(str string) bool {
-	if !threeVowels.MatchString(str) {
-		fmt.Println("No 3 vowels:", str)
+	if !letterPairs.MatcherString(str, 0).Matches() {
+		fmt.Println("No letter pairs:", str)
 		return false
 	}
-	if !doubleLetter.MatcherString(str, 0).Matches() {
-		fmt.Println("No double letter:", str)
-		return false
-	}
-	if badOnes.MatchString(str) {
-		fmt.Println("Bad tuples:", str)
+	if !repeatedLetter.MatcherString(str, 0).Matches() {
+		fmt.Println("No repeated letter:", str)
 		return false
 	}
 	return true

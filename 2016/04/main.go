@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"os"
 	"regexp"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/alext/aoc/helpers"
 )
@@ -23,6 +25,10 @@ func (r Room) String() string {
 
 func (r Room) Real() bool {
 	return checksum(r.encName) == r.checksum
+}
+
+func (r Room) Name() string {
+	return decrypt(r.encName, r.sectorID)
 }
 
 type letterCounts [26]struct {
@@ -55,6 +61,23 @@ func checksum(input string) string {
 	return string(chars)
 }
 
+func decrypt(input string, rot int) string {
+	var output bytes.Buffer
+	offset := rot % 26
+	for _, r := range input {
+		if 'a' <= r && r <= 'z' {
+			r += rune(offset)
+			if r > 'z' {
+				r -= 26
+			}
+			output.WriteRune(r)
+		} else if r == '-' {
+			output.WriteRune(' ')
+		}
+	}
+	return output.String()
+}
+
 var roomRegex = regexp.MustCompile(`([a-z-]+)-(\d+)\[([a-z]+)\]`)
 
 func main() {
@@ -74,6 +97,10 @@ func main() {
 		if r.Real() {
 			realRooms += 1
 			sectorIDSum += r.sectorID
+			name := r.Name()
+			if strings.Contains(name, "north") {
+				fmt.Println(name, r.sectorID)
+			}
 		}
 	})
 	fmt.Println("Total real rooms:", realRooms)

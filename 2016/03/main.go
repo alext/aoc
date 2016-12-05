@@ -1,11 +1,12 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"log"
 	"os"
 	"sort"
+
+	"github.com/alext/aoc/helpers"
 )
 
 type Triangle []int
@@ -20,15 +21,13 @@ func (t Triangle) String() string {
 }
 
 func main() {
-	scanner := bufio.NewScanner(os.Stdin)
-
 	possibleCount := 0
 
 	var points [3][3]int
 	index := 0
 
-	for scanner.Scan() {
-		_, err := fmt.Sscan(scanner.Text(), &points[index][0], &points[index][1], &points[index][2])
+	helpers.ScanLines(os.Stdin, func(line string) {
+		_, err := fmt.Sscan(line, &points[index][0], &points[index][1], &points[index][2])
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -45,9 +44,6 @@ func main() {
 			}
 			index = 0
 		}
-	}
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
-	}
+	})
 	fmt.Println("Possible Count:", possibleCount)
 }

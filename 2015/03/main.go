@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/alext/aoc/2015/helpers"
+	"github.com/alext/aoc/helpers"
 )
 
 type House struct {

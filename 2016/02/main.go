@@ -1,10 +1,10 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
-	"log"
 	"os"
+
+	"github.com/alext/aoc/helpers"
 )
 
 var numberpad [5][5]string
@@ -53,17 +53,12 @@ func (p Position) Move(direction rune) Position {
 var StartingPos = Position{X: 1, Y: 2}
 
 func main() {
-	scanner := bufio.NewScanner(os.Stdin)
-	for scanner.Scan() {
+	helpers.ScanLines(os.Stdin, func(line string) {
 		pos := StartingPos
-		line := scanner.Text()
 		for _, dir := range line {
 			pos = pos.Move(dir)
 			//fmt.Printf("X: %d, Y: %d\n", pos.X, pos.Y)
 		}
 		fmt.Println("Number:", numberpad[pos.Y][pos.X])
-	}
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
-	}
+	})
 }

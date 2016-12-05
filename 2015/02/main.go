@@ -6,7 +6,7 @@ import (
 	"os"
 	"sort"
 
-	"github.com/alext/aoc/2015/helpers"
+	"github.com/alext/aoc/helpers"
 )
 
 type Present []int

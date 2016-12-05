@@ -5,7 +5,7 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/alext/aoc/2015/helpers"
+	"github.com/alext/aoc/helpers"
 	"github.com/glenn-brown/golang-pkg-pcre/src/pkg/pcre"
 )
 

@@ -7,14 +7,14 @@ import (
 )
 
 func ScanLines(in io.Reader, lineProcessor func(string)) {
-	scanWrapper(in, bufio.ScanLines, lineProcessor)
+	ScanWrapper(in, bufio.ScanLines, lineProcessor)
 }
 
 func ScanRunes(in io.Reader, runeProcessor func(string)) {
-	scanWrapper(in, bufio.ScanRunes, runeProcessor)
+	ScanWrapper(in, bufio.ScanRunes, runeProcessor)
 }
 
-func scanWrapper(in io.Reader, split bufio.SplitFunc, processor func(string)) {
+func ScanWrapper(in io.Reader, split bufio.SplitFunc, processor func(string)) {
 	scanner := bufio.NewScanner(in)
 	scanner.Split(split)
 	for scanner.Scan() {

@@ -3,8 +3,9 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
+
+	"github.com/alext/aoc/helpers"
 )
 
 type Direction uint8
@@ -87,8 +88,7 @@ func (n *Navigator) String() string {
 }
 
 func main() {
-	scanner := bufio.NewScanner(os.Stdin)
-	scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	splitFunc := func(data []byte, atEOF bool) (advance int, token []byte, err error) {
 		for i := 0; i < len(data); i++ {
 			if data[i] == ',' {
 				return i + 1, data[:i], nil
@@ -99,23 +99,20 @@ func main() {
 		} else {
 			return 0, nil, nil
 		}
-	})
+	}
 
 	n := NewNavigator()
 	var turn string
 	var steps int
 
-	for scanner.Scan() {
-		fmt.Sscanf(scanner.Text(), "%1s%d", &turn, &steps)
+	helpers.ScanWrapper(os.Stdin, splitFunc, func(token string) {
+		fmt.Sscanf(token, "%1s%d", &turn, &steps)
 		if n.Move(turn, steps) {
 			fmt.Println("First duplicate pos:", n)
-			return
+			os.Exit(0)
 		}
 		fmt.Println("Step:", n)
-	}
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
-	}
+	})
 	fmt.Println("Final pos:", n)
 }
 

@@ -35,8 +35,7 @@ func checksum(input string) string {
 	var counts helpers.LetterCounts
 	for _, r := range input {
 		if 'a' <= r && r <= 'z' {
-			counts[r-'a'].Letter = r
-			counts[r-'a'].Count += 1
+			counts.Count(r)
 		}
 	}
 	sort.Sort(&counts)

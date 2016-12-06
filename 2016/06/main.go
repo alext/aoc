@@ -21,7 +21,14 @@ func main() {
 	fmt.Print("Message: ")
 	for _, counts := range countSet {
 		sort.Sort(counts)
-		fmt.Printf("%c", counts[0].Letter)
+		var letter rune
+		for _, l := range counts {
+			if l.Count == 0 {
+				break
+			}
+			letter = l.Letter
+		}
+		fmt.Printf("%c", letter)
 	}
 	fmt.Println("")
 }

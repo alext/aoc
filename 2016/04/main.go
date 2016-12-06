@@ -31,32 +31,18 @@ func (r Room) Name() string {
 	return decrypt(r.encName, r.sectorID)
 }
 
-type letterCounts [26]struct {
-	letter rune
-	count  uint
-}
-
-func (l *letterCounts) Len() int      { return len(l) }
-func (l *letterCounts) Swap(i, j int) { l[i], l[j] = l[j], l[i] }
-func (l *letterCounts) Less(i, j int) bool {
-	if l[i].count == l[j].count {
-		return l[i].letter <= l[j].letter
-	}
-	return l[i].count > l[j].count
-}
-
 func checksum(input string) string {
-	var counts letterCounts
+	var counts helpers.LetterCounts
 	for _, r := range input {
 		if 'a' <= r && r <= 'z' {
-			counts[r-'a'].letter = r
-			counts[r-'a'].count += 1
+			counts[r-'a'].Letter = r
+			counts[r-'a'].Count += 1
 		}
 	}
 	sort.Sort(&counts)
 	chars := make([]byte, 0, 5)
 	for _, i := range counts[0:5] {
-		chars = append(chars, byte(i.letter))
+		chars = append(chars, byte(i.Letter))
 	}
 	return string(chars)
 }

@@ -21,25 +21,25 @@ type Wire struct {
 }
 
 func (w *Wire) Sender() chan<- uint16 {
-	ch := make(chan uint16, 1)
 	w.lock.Lock()
 	defer w.lock.Unlock()
-	if w.input != nil {
-		panic("Duplicate outputs to wire " + w.name)
+	if w.input == nil {
+		w.input = make(chan uint16, 1)
+		go w.readInput()
 	}
-	w.input = ch
-	go w.readInput()
-	return ch
+	return w.input
 }
 
 func (w *Wire) readInput() {
-	value := <-w.input
-	w.lock.Lock()
-	defer w.lock.Unlock()
-	w.value = value
-	w.valueSet = true
-	for _, ch := range w.outputs {
-		ch <- w.value
+	for {
+		value := <-w.input
+		w.lock.Lock()
+		w.value = value
+		w.valueSet = true
+		for _, ch := range w.outputs {
+			ch <- w.value
+		}
+		w.lock.Unlock()
 	}
 }
 
@@ -47,22 +47,29 @@ func (w *Wire) AddReceiver() <-chan uint16 {
 	ch := make(chan uint16, 1)
 	w.lock.Lock()
 	defer w.lock.Unlock()
+	w.outputs = append(w.outputs, ch)
 	if w.valueSet {
 		ch <- w.value
-	} else {
-		w.outputs = append(w.outputs, ch)
 	}
 	return ch
 }
 
 var wires = make(map[string]*Wire)
 
-func getWire(name string) *Wire {
+func getWire(name string, inputLabels ...string) *Wire {
 	// Generate a constant input wire when given an integer
 	num, err := strconv.ParseUint(name, 10, 16)
 	if err == nil {
 		w := &Wire{name: "constant"}
-		w.Sender() <- uint16(num)
+		inputLabel := "constant"
+		if len(inputLabels) > 0 {
+			inputLabel = inputLabels[0]
+		}
+		inputs = append(inputs, &Input{
+			label: inputLabel,
+			ch:    w.Sender(),
+			value: uint16(num),
+		})
 		return w
 	}
 
@@ -74,12 +81,26 @@ func getWire(name string) *Wire {
 	return w
 }
 
+type Input struct {
+	label string
+	ch    chan<- uint16
+	value uint16
+}
+
+func (i *Input) Send() {
+	i.ch <- i.value
+}
+
+var inputs = make([]*Input, 0)
+
 func unaryOperator(op string, in, out *Wire) {
 	inCh := in.AddReceiver()
 	outCh := out.Sender()
 
 	go func() {
-		outCh <- calculate(op, <-inCh, 0)
+		for {
+			outCh <- calculate(op, <-inCh, 0)
+		}
 	}()
 }
 
@@ -89,7 +110,9 @@ func binaryOperator(op string, in1, in2, out *Wire) {
 	outCh := out.Sender()
 
 	go func() {
-		outCh <- calculate(op, <-in1Ch, <-in2Ch)
+		for {
+			outCh <- calculate(op, <-in1Ch, <-in2Ch)
+		}
 	}()
 }
 
@@ -128,16 +151,33 @@ func main() {
 			out := getWire(tokens[3])
 			unaryOperator(tokens[0], in, out)
 		case len(tokens) == 3:
-			in := getWire(tokens[0])
+			in := getWire(tokens[0], tokens[2])
 			out := getWire(tokens[2])
 			unaryOperator("WIRE", in, out)
 		default:
 			log.Fatal("Unrecognised instruction line: ", line)
 		}
 	})
+	for _, input := range inputs {
+		input.Send()
+	}
+
 	for name, wire := range wires {
 		fmt.Printf("Wire %s: %d\n", name, <-wire.AddReceiver())
 	}
-	outputWire := getWire("a")
-	fmt.Println("Result on wire a:", <-outputWire.AddReceiver())
+	a := getWire("a")
+	aCh := a.AddReceiver()
+	aValue := <-aCh
+	fmt.Println("Initial result on wire a:", aValue)
+
+	for _, input := range inputs {
+		if input.label == "b" {
+			fmt.Println("Setting wire b value to", aValue)
+			input.value = aValue
+		}
+		input.Send()
+	}
+
+	aValue = <-aCh
+	fmt.Println("Second result on wire a:", aValue)
 }

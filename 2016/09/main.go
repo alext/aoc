@@ -28,7 +28,12 @@ func expandSequence(in readerByteReader) (int, error) {
 		return 0, err
 	}
 
-	return segment.Len() * count, nil
+	segmentSize, err := expandStream(&segment)
+	if err != nil {
+		return 0, err
+	}
+
+	return segmentSize * count, nil
 }
 
 func expandStream(in readerByteReader) (int, error) {

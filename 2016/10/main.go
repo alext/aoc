@@ -150,6 +150,7 @@ func main() {
 			fmt.Printf("Bot %d compared 17 and 61\n", bot.ID)
 		}
 	}
+	fmt.Println("Product of outputs 0, 1 and 2:", GetOutput(0).ReadValue()*GetOutput(1).ReadValue()*GetOutput(2).ReadValue())
 }
 
 func mustAtoi(in string) int {

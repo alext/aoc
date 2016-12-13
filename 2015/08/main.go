@@ -68,17 +68,36 @@ func unescape(input string) string {
 	return out.String()
 }
 
+func escape(input string) string {
+	in := bytes.NewBufferString(input)
+	out := bytes.NewBufferString(`"`)
+
+	for b, err := in.ReadByte(); err == nil; b, err = in.ReadByte() {
+		switch b {
+		case '"', '\\':
+			out.WriteByte('\\')
+			fallthrough
+		default:
+			out.WriteByte(b)
+		}
+	}
+	out.WriteByte('"')
+	return out.String()
+}
+
 func main() {
 	inChars := 0
-	outChars := 0
+	decodedChars := 0
+	encodedChars := 0
 	helpers.ScanLines(os.Stdin, func(line string) {
 		inChars += len(line)
-		out := unescape(line)
-		outChars += len(out)
-		fmt.Println("In:", line, "Out:", out)
+		decodedChars += len(unescape(line))
+		encodedChars += len(escape(line))
 	})
 
 	fmt.Println("Input characters:", inChars)
-	fmt.Println("Output characters:", outChars)
-	fmt.Println("Difference:", inChars-outChars)
+	fmt.Println("Decoded characters:", decodedChars)
+	fmt.Println("Decoded difference:", inChars-decodedChars)
+	fmt.Println("Encoded characters:", encodedChars)
+	fmt.Println("Encoded difference:", encodedChars-inChars)
 }

@@ -11,46 +11,42 @@ import (
 	"github.com/alext/aoc/helpers"
 )
 
-func processEscape(in io.RuneReader) rune {
-	r, _, err := in.ReadRune()
+func processEscape(in *bytes.Buffer) byte {
+	b, err := in.ReadByte()
 	if err != nil {
 		log.Fatalln("Error processing escape:", err)
 	}
-	switch r {
+	switch b {
 	case '"', '\\':
-		return r
+		return b
 	case 'x':
-		digit1, _, err := in.ReadRune()
-		if err != nil {
-			log.Fatalln("Error reading:", err)
+		digits := in.Next(2)
+		if len(digits) != 2 {
+			log.Fatalln("Failed to read 2 digits for \\x escape sequence")
 		}
-		digit2, _, err := in.ReadRune()
-		if err != nil {
-			log.Fatalln("Error reading:", err)
-		}
-		out, err := hex.DecodeString(fmt.Sprintf("%c%c", digit1, digit2))
+		out, err := hex.DecodeString(string(digits))
 		if err != nil {
 			log.Fatalln("Error decoding hex:", err)
 		}
-		return rune(out[0])
+		return out[0]
 	default:
-		log.Fatalf("Unrecognised escape sequence \\%c", r)
+		log.Fatalf("Unrecognised escape sequence \\%c", b)
 	}
 	return ' ' // Never reached
 }
 
 func unescape(input string) string {
 	in := bytes.NewBufferString(input)
-	r, _, err := in.ReadRune()
-	if err != nil || r != '"' {
+	b, err := in.ReadByte()
+	if err != nil || b != '"' {
 		log.Fatalln("Line starts without quote, or read error:", err)
 	}
 
 	var out bytes.Buffer
-	for r, _, err = in.ReadRune(); err == nil; r, _, err = in.ReadRune() {
-		switch r {
+	for b, err = in.ReadByte(); err == nil; b, err = in.ReadByte() {
+		switch b {
 		case '\\':
-			_, err = out.WriteRune(processEscape(in))
+			err = out.WriteByte(processEscape(in))
 			if err != nil {
 				log.Fatalln("Error writing to buffer:", err)
 			}
@@ -59,7 +55,7 @@ func unescape(input string) string {
 		case ' ', '\n':
 			// Ignore
 		default:
-			_, err = out.WriteRune(r)
+			err = out.WriteByte(b)
 			if err != nil {
 				log.Fatalln("Error writing to buffer:", err)
 			}

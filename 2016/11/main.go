@@ -4,22 +4,69 @@ import (
 	"fmt"
 	"hash/crc32"
 	"io"
+	"log"
 	"os"
+	"regexp"
+	"strings"
+
+	"github.com/alext/aoc/helpers"
 )
 
 const floors = 4
 
-type Floor []string
-
 type State struct {
-	Floors       [floors]Floor
+	Floors       [floors][]string
 	CurrentFloor int
 	Hash         uint32
 }
 
+var (
+	floorRE = regexp.MustCompile(`The (\S+) floor contains`)
+)
+
+func readFloor(line string) int {
+	matches := floorRE.FindStringSubmatch(line)
+	if matches == nil {
+		log.Fatalln("Error reading floor number in line:", line)
+	}
+	switch matches[1] {
+	case "first":
+		return 0
+	case "second":
+		return 1
+	case "third":
+		return 2
+	case "fourth":
+		return 3
+	default:
+		log.Fatalln("Unrecognised floor number:", matches[1])
+	}
+	return 0 // Never reached
+}
+
+var itemRE = regexp.MustCompile(`a (.*?)(?:-compatible)? (generator|microchip)`)
+
+func readItems(line string) []string {
+	allMatches := itemRE.FindAllStringSubmatch(line, -1)
+	if allMatches == nil {
+		log.Fatalln("Failed to find items for line:", line)
+	}
+	var results []string
+	for _, matches := range allMatches {
+		results = append(results, matches[1]+" "+matches[2])
+	}
+	return results
+}
+
 func BuildInitialState(in io.Reader) *State {
 	s := &State{}
-	// TODO: Parse input
+	helpers.ScanLines(in, func(line string) {
+		if strings.Contains(line, "nothing relevant") {
+			return
+		}
+		floorNo := readFloor(line)
+		s.Floors[floorNo] = readItems(line)
+	})
 	s.setHash()
 	return s
 }
@@ -36,7 +83,7 @@ func (s *State) Complete() bool {
 }
 
 func (s *State) setHash() {
-	s.Hash = 0
+	s.Hash = 0 // Set to 0 to ensure deterministic hash.
 	s.Hash = crc32.ChecksumIEEE([]byte(fmt.Sprintf("%#v", s)))
 }
 
@@ -47,7 +94,7 @@ func (s *State) enumerateMoves(ch chan *State) {
 }
 
 func (s *State) availableMoves() <-chan *State {
-	ch := make(chan *State)
+	ch := make(chan *State, 2)
 	go s.enumerateMoves(ch)
 	return ch
 }

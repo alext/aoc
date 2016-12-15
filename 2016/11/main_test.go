@@ -17,11 +17,11 @@ func TestComplete(t *testing.T) {
 		},
 		{
 			S: &State{
-				Floors: [floors]Floor{
-					Floor{},
-					Floor{},
-					Floor{},
-					Floor{"something"},
+				Floors: [floors][]string{
+					[]string{},
+					[]string{},
+					[]string{},
+					[]string{"something"},
 				},
 				CurrentFloor: floors - 1,
 			},
@@ -29,11 +29,11 @@ func TestComplete(t *testing.T) {
 		},
 		{
 			S: &State{
-				Floors: [floors]Floor{
-					Floor{},
-					Floor{"something else"},
-					Floor{},
-					Floor{"something"},
+				Floors: [floors][]string{
+					[]string{},
+					[]string{"something else"},
+					[]string{},
+					[]string{"something"},
 				},
 				CurrentFloor: floors - 1,
 			},

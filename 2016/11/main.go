@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/alext/aoc/helpers"
@@ -84,11 +85,82 @@ func (s *State) Complete() bool {
 
 func (s *State) setHash() {
 	s.Hash = 0 // Set to 0 to ensure deterministic hash.
+
+	// Normalise data for consistency
+	for i := 0; i < floors; i++ {
+		if s.Floors[i] == nil {
+			s.Floors[i] = []string{}
+		}
+		sort.Strings(s.Floors[i])
+	}
 	s.Hash = crc32.ChecksumIEEE([]byte(fmt.Sprintf("%#v", s)))
 }
 
+func (s *State) Safe() bool {
+	// TODO: implement safe calculation
+	return false
+}
+
+func (s *State) Move(newFloor int, items []string) *State {
+	move := &State{CurrentFloor: newFloor}
+	for i := 0; i < floors; i++ {
+		if i == s.CurrentFloor {
+			for _, item := range s.Floors[s.CurrentFloor] {
+				found := false
+				for _, movingItem := range items {
+					if item == movingItem {
+						found = true
+						break
+					}
+				}
+				if !found {
+					move.Floors[i] = append(move.Floors[i], item)
+				}
+			}
+			continue
+		}
+		move.Floors[i] = make([]string, len(s.Floors[i]))
+		copy(move.Floors[i], s.Floors[i])
+		if i == newFloor {
+			move.Floors[i] = append(move.Floors[i], items...)
+		}
+	}
+	move.setHash()
+	return move
+}
+
 func (s *State) enumerateMoves(ch chan *State) {
-	// TODO: Calculate moves
+	for i, item := range s.Floors[s.CurrentFloor] {
+		// Moving a single item
+		if s.CurrentFloor < floors-1 {
+			candidate := s.Move(s.CurrentFloor+1, []string{item})
+			if candidate.Safe() {
+				ch <- candidate
+			}
+		}
+		if s.CurrentFloor > 0 {
+			candidate := s.Move(s.CurrentFloor-1, []string{item})
+			if candidate.Safe() {
+				ch <- candidate
+			}
+		}
+
+		// Moving 2 items
+		for _, secondItem := range s.Floors[s.CurrentFloor][i+1:] {
+			if s.CurrentFloor < floors-1 {
+				candidate := s.Move(s.CurrentFloor+1, []string{item, secondItem})
+				if candidate.Safe() {
+					ch <- candidate
+				}
+			}
+			if s.CurrentFloor > 0 {
+				candidate := s.Move(s.CurrentFloor-1, []string{item, secondItem})
+				if candidate.Safe() {
+					ch <- candidate
+				}
+			}
+		}
+	}
 
 	close(ch)
 }

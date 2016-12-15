@@ -9,9 +9,7 @@ import (
 
 const floors = 4
 
-type Floor struct {
-	Items []string
-}
+type Floor []string
 
 type State struct {
 	Floors       [floors]Floor
@@ -27,8 +25,14 @@ func BuildInitialState(in io.Reader) *State {
 }
 
 func (s *State) Complete() bool {
-	// TODO: Calculate completness
-	return false
+	// False if anything on a floor other than the top floor
+	for i := 0; i < floors-1; i++ {
+		if len(s.Floors[i]) > 0 {
+			return false
+		}
+	}
+	// False if not currently on the top floor
+	return s.CurrentFloor == floors-1
 }
 
 func (s *State) setHash() {

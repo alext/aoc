@@ -118,3 +118,66 @@ func TestMove(t *testing.T) {
 		}
 	}
 }
+
+func TestSafe(t *testing.T) {
+
+	tests := []struct {
+		S    *State
+		Safe bool
+	}{
+		{
+			S:    &State{},
+			Safe: true,
+		},
+		{
+			S: &State{
+				Floors: [floors][]string{
+					[]string{},
+					[]string{"alpha microchip", "bravo microchip"},
+					[]string{"delta generator"},
+					[]string{},
+				},
+			},
+			Safe: true,
+		},
+		{
+			S: &State{
+				Floors: [floors][]string{
+					[]string{"bravo microchip"},
+					[]string{},
+					[]string{"alpha microchip", "alpha generator", "delta generator"},
+					[]string{},
+				},
+			},
+			Safe: true,
+		},
+		{
+			S: &State{
+				Floors: [floors][]string{
+					[]string{},
+					[]string{"bravo microchip"},
+					[]string{"alpha microchip", "delta generator"},
+					[]string{},
+				},
+			},
+			Safe: false,
+		},
+		{
+			S: &State{
+				Floors: [floors][]string{
+					[]string{},
+					[]string{"alpha microchip", "bravo microchip", "bravo generator"},
+					[]string{"delta generator"},
+					[]string{},
+				},
+			},
+			Safe: false,
+		},
+	}
+	for _, test := range tests {
+		actualSafe := test.S.Safe()
+		if actualSafe != test.Safe {
+			t.Errorf("Expected safe:%t, got:%t for %#v", test.Safe, actualSafe, test.S)
+		}
+	}
+}

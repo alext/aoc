@@ -97,8 +97,34 @@ func (s *State) setHash() {
 }
 
 func (s *State) Safe() bool {
-	// TODO: implement safe calculation
-	return false
+	for i := 0; i < floors; i++ {
+		if len(s.Floors[i]) == 0 {
+			continue
+		}
+		var generators, microchips []string
+		for _, item := range s.Floors[i] {
+			if strings.Contains(item, "generator") {
+				generators = append(generators, strings.TrimSuffix(item, " generator"))
+			} else {
+				microchips = append(microchips, strings.TrimSuffix(item, "-compatible microchip"))
+			}
+		}
+		if len(generators) == 0 {
+			continue
+		}
+		for _, chip := range microchips {
+			found := false
+			for _, generator := range generators {
+				if generator == chip {
+					found = true
+				}
+			}
+			if !found {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func (s *State) Move(newFloor int, items []string) *State {

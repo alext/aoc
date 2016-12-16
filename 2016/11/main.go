@@ -197,36 +197,40 @@ func (s *State) availableMoves() <-chan *State {
 	return ch
 }
 
-func (s *State) CountMoves(path []uint32) int {
+var stateDepths = make(map[uint32]int)
+
+func (s *State) FewestMoves(depth int) (int, bool) {
+	previousDepth, ok := stateDepths[s.Hash]
+	if ok && previousDepth <= depth {
+		return 0, false
+	} else {
+		stateDepths[s.Hash] = depth
+	}
 	if s.Complete() {
-		return 0
+		return depth, true
 	}
 
-	path = append(path, s.Hash)
-
-	best := -1000
+	bestMoves := 0
+	solved := false
 	for nextState := range s.availableMoves() {
-		if alreadyVisited(path, nextState) {
+		moves, complete := nextState.FewestMoves(depth + 1)
+		if !complete {
 			continue
 		}
-		candidate := nextState.CountMoves(path)
-		if best < 0 || (candidate >= 0 && candidate < best) {
-			best = candidate
+		if !solved || moves < bestMoves {
+			bestMoves = moves
+			solved = true
 		}
 	}
-	return best + 1
-}
-
-func alreadyVisited(path []uint32, s *State) bool {
-	for _, hash := range path {
-		if s.Hash == hash {
-			return true
-		}
-	}
-	return false
+	return bestMoves, solved
 }
 
 func main() {
 	s := BuildInitialState(os.Stdin)
-	fmt.Println("Min moves:", s.CountMoves(nil))
+	moves, complete := s.FewestMoves(0)
+	if complete {
+		fmt.Println("Min moves:", moves)
+	} else {
+		fmt.Println("Failed to find solution")
+	}
 }

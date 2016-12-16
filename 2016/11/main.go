@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"hash/crc32"
 	"io"
@@ -83,9 +84,9 @@ func (s *State) Complete() bool {
 	return s.CurrentFloor == floors-1
 }
 
-func (s *State) setHash() {
-	s.Hash = 0 // Set to 0 to ensure deterministic hash.
+var hashBuffer bytes.Buffer
 
+func (s *State) setHash() {
 	// Normalise data for consistency
 	for i := 0; i < floors; i++ {
 		if s.Floors[i] == nil {
@@ -93,7 +94,15 @@ func (s *State) setHash() {
 		}
 		sort.Strings(s.Floors[i])
 	}
-	s.Hash = crc32.ChecksumIEEE([]byte(fmt.Sprintf("%#v", s)))
+	hashBuffer.Reset()
+	hashBuffer.WriteByte(byte(s.CurrentFloor))
+	for i, f := range s.Floors {
+		hashBuffer.WriteByte(byte(i))
+		for _, item := range f {
+			hashBuffer.Write([]byte(item))
+		}
+	}
+	s.Hash = crc32.ChecksumIEEE(hashBuffer.Bytes())
 }
 
 func (s *State) Safe() bool {

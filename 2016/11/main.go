@@ -146,6 +146,7 @@ func (s *State) Move(newFloor int, items []string) *State {
 	move := &State{CurrentFloor: newFloor}
 	for i := 0; i < floors; i++ {
 		if i == s.CurrentFloor {
+			move.Floors[i] = make([]string, 0, len(s.Floors[i]))
 			for _, item := range s.Floors[s.CurrentFloor] {
 				found := false
 				for _, movingItem := range items {

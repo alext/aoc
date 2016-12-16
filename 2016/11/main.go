@@ -45,7 +45,7 @@ func readFloor(line string) int {
 	return 0 // Never reached
 }
 
-var itemRE = regexp.MustCompile(`a (.*?)(?:-compatible)? (generator|microchip)`)
+var itemRE = regexp.MustCompile(`an? (.*?)(?:-compatible)? (generator|microchip)`)
 
 func readItems(line string) []string {
 	allMatches := itemRE.FindAllStringSubmatch(line, -1)

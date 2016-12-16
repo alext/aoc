@@ -105,12 +105,18 @@ func (s *State) setHash() {
 	s.Hash = crc32.ChecksumIEEE(hashBuffer.Bytes())
 }
 
+var (
+	generators = make([]string, 0)
+	microchips = make([]string, 0)
+)
+
 func (s *State) Safe() bool {
 	for i := 0; i < floors; i++ {
 		if len(s.Floors[i]) == 0 {
 			continue
 		}
-		var generators, microchips []string
+		generators = generators[:0]
+		microchips = microchips[:0]
 		for _, item := range s.Floors[i] {
 			if strings.Contains(item, "generator") {
 				generators = append(generators, strings.TrimSuffix(item, " generator"))

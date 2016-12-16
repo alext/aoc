@@ -197,37 +197,47 @@ func (s *State) availableMoves() <-chan *State {
 	return ch
 }
 
-var stateDepths = make(map[uint32]int)
-
-func (s *State) FewestMoves(depth int) (int, bool) {
-	previousDepth, ok := stateDepths[s.Hash]
-	if ok && previousDepth <= depth {
-		return 0, false
-	} else {
-		stateDepths[s.Hash] = depth
-	}
-	if s.Complete() {
-		return depth, true
+func FewestMoves(initial *State) (int, bool) {
+	if initial.Complete() {
+		return 0, true
 	}
 
-	bestMoves := 0
-	solved := false
-	for nextState := range s.availableMoves() {
-		moves, complete := nextState.FewestMoves(depth + 1)
-		if !complete {
-			continue
+	var (
+		seenStates  = map[uint32]bool{initial.Hash: true}
+		previousSet = []*State{initial}
+		currentSet  = []*State{}
+		totalMoves  = 0
+	)
+	for depth := 1; true; depth++ {
+		for _, state := range previousSet {
+			for newState := range state.availableMoves() {
+				_, seen := seenStates[newState.Hash]
+				if !seen {
+					currentSet = append(currentSet, newState)
+					seenStates[newState.Hash] = true
+				}
+			}
 		}
-		if !solved || moves < bestMoves {
-			bestMoves = moves
-			solved = true
+		totalMoves += len(currentSet)
+		fmt.Printf("Depth: %4d, available moves: %4d, total available moves: %6d\n", depth, len(currentSet), totalMoves)
+		if len(currentSet) == 0 {
+			break
 		}
+		for _, state := range currentSet {
+			if state.Complete() {
+				return depth, true
+			}
+			seenStates[state.Hash] = true
+		}
+		previousSet = currentSet
+		currentSet = nil
 	}
-	return bestMoves, solved
+	return 0, false
 }
 
 func main() {
 	s := BuildInitialState(os.Stdin)
-	moves, complete := s.FewestMoves(0)
+	moves, complete := FewestMoves(s)
 	if complete {
 		fmt.Println("Min moves:", moves)
 	} else {

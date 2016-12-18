@@ -3,9 +3,19 @@ package main
 import (
 	"bytes"
 	"hash/crc32"
+	"sort"
 )
 
 type itemPositions [][2]uint8
+
+func (i itemPositions) Len() int      { return len(i) }
+func (i itemPositions) Swap(a, b int) { i[a], i[b] = i[b], i[a] }
+func (i itemPositions) Less(a, b int) bool {
+	if i[a][0] == i[b][0] {
+		return i[a][1] < i[b][1]
+	}
+	return i[a][0] < i[b][0]
+}
 
 type StateV2 struct {
 	positions    itemPositions
@@ -20,6 +30,7 @@ func (s *StateV2) Hash() uint32 {
 var hashBuffer2 bytes.Buffer
 
 func (s *StateV2) setHash() {
+	sort.Sort(s.positions)
 	hashBuffer2.Reset()
 	hashBuffer2.WriteByte(s.currentFloor)
 	for _, pair := range s.positions {

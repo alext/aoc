@@ -4,38 +4,38 @@ import "testing"
 
 func TestComplete(t *testing.T) {
 	tests := []struct {
-		S        *State
+		S        *StateV1
 		Expected bool
 	}{
 		{
-			S:        &State{CurrentFloor: floors - 1},
+			S:        &StateV1{currentFloor: floors - 1},
 			Expected: true,
 		},
 		{
-			S:        &State{CurrentFloor: floors - 2},
+			S:        &StateV1{currentFloor: floors - 2},
 			Expected: false,
 		},
 		{
-			S: &State{
-				Floors: [floors][]string{
+			S: &StateV1{
+				floors: [floors][]string{
 					[]string{},
 					[]string{},
 					[]string{},
 					[]string{"something"},
 				},
-				CurrentFloor: floors - 1,
+				currentFloor: floors - 1,
 			},
 			Expected: true,
 		},
 		{
-			S: &State{
-				Floors: [floors][]string{
+			S: &StateV1{
+				floors: [floors][]string{
 					[]string{},
 					[]string{"something else"},
 					[]string{},
 					[]string{"something"},
 				},
-				CurrentFloor: floors - 1,
+				currentFloor: floors - 1,
 			},
 			Expected: false,
 		},
@@ -51,20 +51,20 @@ func TestComplete(t *testing.T) {
 func TestMove(t *testing.T) {
 
 	tests := []struct {
-		Initial     *State
+		Initial     *StateV1
 		NewFloor    int
 		MovingItems []string
-		Expected    *State
+		Expected    *StateV1
 	}{
 		{
-			Initial:  &State{},
+			Initial:  &StateV1{},
 			NewFloor: 1,
-			Expected: &State{CurrentFloor: 1},
+			Expected: &StateV1{currentFloor: 1},
 		},
 		{
-			Initial: &State{
-				CurrentFloor: 1,
-				Floors: [floors][]string{
+			Initial: &StateV1{
+				currentFloor: 1,
+				floors: [floors][]string{
 					[]string{},
 					[]string{"alpha", "bravo", "charlie"},
 					[]string{"delta", "echo"},
@@ -73,9 +73,9 @@ func TestMove(t *testing.T) {
 			},
 			NewFloor:    2,
 			MovingItems: []string{"bravo"},
-			Expected: &State{
-				CurrentFloor: 2,
-				Floors: [floors][]string{
+			Expected: &StateV1{
+				currentFloor: 2,
+				floors: [floors][]string{
 					[]string{},
 					[]string{"alpha", "charlie"},
 					[]string{"bravo", "delta", "echo"},
@@ -84,9 +84,9 @@ func TestMove(t *testing.T) {
 			},
 		},
 		{
-			Initial: &State{
-				CurrentFloor: 1,
-				Floors: [floors][]string{
+			Initial: &StateV1{
+				currentFloor: 1,
+				floors: [floors][]string{
 					[]string{},
 					[]string{"alpha", "bravo", "charlie", "echo"},
 					[]string{"delta"},
@@ -95,9 +95,9 @@ func TestMove(t *testing.T) {
 			},
 			NewFloor:    0,
 			MovingItems: []string{"bravo", "alpha"},
-			Expected: &State{
-				CurrentFloor: 0,
-				Floors: [floors][]string{
+			Expected: &StateV1{
+				currentFloor: 0,
+				floors: [floors][]string{
 					[]string{"alpha", "bravo"},
 					[]string{"charlie", "echo"},
 					[]string{"delta"},
@@ -108,12 +108,12 @@ func TestMove(t *testing.T) {
 	}
 	for _, test := range tests {
 		test.Expected.setHash()
-		actual := test.Initial.Move(test.NewFloor, test.MovingItems)
+		actual := test.Initial.move(test.NewFloor, test.MovingItems)
 
-		if actual.Hash == 0 {
+		if actual.hash == 0 {
 			t.Fatalf("No hash set for %#v", actual)
 		}
-		if actual.Hash != test.Expected.Hash {
+		if actual.hash != test.Expected.hash {
 			t.Errorf("Expected:\n%#v\nGot:\n%#v", test.Expected, actual)
 		}
 	}
@@ -122,16 +122,16 @@ func TestMove(t *testing.T) {
 func TestSafe(t *testing.T) {
 
 	tests := []struct {
-		S    *State
+		S    *StateV1
 		Safe bool
 	}{
 		{
-			S:    &State{},
+			S:    &StateV1{},
 			Safe: true,
 		},
 		{
-			S: &State{
-				Floors: [floors][]string{
+			S: &StateV1{
+				floors: [floors][]string{
 					[]string{},
 					[]string{"alpha microchip", "bravo microchip"},
 					[]string{"delta generator"},
@@ -141,8 +141,8 @@ func TestSafe(t *testing.T) {
 			Safe: true,
 		},
 		{
-			S: &State{
-				Floors: [floors][]string{
+			S: &StateV1{
+				floors: [floors][]string{
 					[]string{"bravo microchip"},
 					[]string{},
 					[]string{"alpha microchip", "alpha generator", "delta generator"},
@@ -152,8 +152,8 @@ func TestSafe(t *testing.T) {
 			Safe: true,
 		},
 		{
-			S: &State{
-				Floors: [floors][]string{
+			S: &StateV1{
+				floors: [floors][]string{
 					[]string{},
 					[]string{"bravo microchip"},
 					[]string{"alpha microchip", "delta generator"},
@@ -163,8 +163,8 @@ func TestSafe(t *testing.T) {
 			Safe: false,
 		},
 		{
-			S: &State{
-				Floors: [floors][]string{
+			S: &StateV1{
+				floors: [floors][]string{
 					[]string{},
 					[]string{"alpha microchip", "bravo microchip", "bravo generator"},
 					[]string{"delta generator"},

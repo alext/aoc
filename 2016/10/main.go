@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/alext/aoc/helpers"
@@ -129,14 +128,14 @@ func main() {
 		tokens := strings.Split(line, " ")
 		switch tokens[0] {
 		case "value":
-			value := mustAtoi(tokens[1])
-			targetID := mustAtoi(tokens[5])
+			value := helpers.MustAtoi(tokens[1])
+			targetID := helpers.MustAtoi(tokens[5])
 			GetReceiver(tokens[4], targetID).SendValue(value)
 		case "bot":
-			bot := GetBot(mustAtoi(tokens[1]))
-			r := GetReceiver(tokens[5], mustAtoi(tokens[6]))
+			bot := GetBot(helpers.MustAtoi(tokens[1]))
+			r := GetReceiver(tokens[5], helpers.MustAtoi(tokens[6]))
 			bot.AddReceiver(tokens[3], r)
-			r = GetReceiver(tokens[10], mustAtoi(tokens[11]))
+			r = GetReceiver(tokens[10], helpers.MustAtoi(tokens[11]))
 			bot.AddReceiver(tokens[8], r)
 		default:
 			log.Fatalln("Unrecognised instruction:", line)
@@ -151,12 +150,4 @@ func main() {
 		}
 	}
 	fmt.Println("Product of outputs 0, 1 and 2:", GetOutput(0).ReadValue()*GetOutput(1).ReadValue()*GetOutput(2).ReadValue())
-}
-
-func mustAtoi(in string) int {
-	value, err := strconv.Atoi(in)
-	if err != nil {
-		log.Fatalln("Failed to parse number:", in)
-	}
-	return value
 }

@@ -101,6 +101,7 @@ func main() {
 	if err != nil {
 		log.Fatalln("Error loading program:", err)
 	}
+	cpu.Registers["c"] = 1
 	cpu.Run()
 
 	fmt.Println("Final state:", cpu)

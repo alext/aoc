@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -61,6 +62,61 @@ func NewSpace(p Position) *Space {
 
 type Maze map[Position]*Space
 
+func (m Maze) iterateSpaces(ctx context.Context, start *Space) <-chan *Space {
+	start.Distance = 0
+	m[start.Pos] = start
+
+	candidates := make(map[Position]bool)
+	candidates[start.Pos] = true
+
+	ch := make(chan *Space)
+	go func() {
+		for {
+			if len(candidates) == 0 {
+				close(ch)
+				return
+			}
+
+			var (
+				distance  uint64 = Infinity
+				candidate *Space
+			)
+			for pos, _ := range candidates {
+				if m[pos].Distance < distance {
+					candidate = m[pos]
+					distance = candidate.Distance
+				}
+			}
+			delete(candidates, candidate.Pos)
+
+			select {
+			case <-ctx.Done():
+				close(ch)
+				return
+			case ch <- candidate:
+			}
+
+			for pos := range candidate.Pos.Neighbours() {
+				space, ok := m[pos]
+				if !ok {
+					space = NewSpace(pos)
+					m[pos] = space
+				}
+				if space.Wall || space.Visited {
+					continue
+				}
+				if space.Distance > candidate.Distance+1 {
+					space.Distance = candidate.Distance + 1
+					candidates[space.Pos] = true
+				}
+			}
+
+			candidate.Visited = true
+		}
+	}()
+	return ch
+}
+
 func (m Maze) ShortestPath(startPos, targetPos Position) uint64 {
 	target := NewSpace(targetPos)
 	if target.Wall {
@@ -72,50 +128,16 @@ func (m Maze) ShortestPath(startPos, targetPos Position) uint64 {
 	if start.Wall {
 		log.Fatalln("Error start square is a wall")
 	}
-	start.Distance = 0
-	m[start.Pos] = start
 
-	candidates := make(map[Position]bool)
-	candidates[start.Pos] = true
-
-	for {
-		if len(candidates) == 0 {
-			log.Fatalln("No more candidate spaces")
+	ctx, cancel := context.WithCancel(context.Background())
+	for space := range m.iterateSpaces(ctx, start) {
+		if space.Pos == targetPos {
+			cancel()
+			return space.Distance
 		}
-
-		var (
-			distance  uint64 = Infinity
-			candidate *Space
-		)
-		for pos, _ := range candidates {
-			if m[pos].Distance < distance {
-				candidate = m[pos]
-				distance = candidate.Distance
-			}
-		}
-		delete(candidates, candidate.Pos)
-
-		if candidate.Pos == target.Pos {
-			return candidate.Distance
-		}
-
-		for pos := range candidate.Pos.Neighbours() {
-			space, ok := m[pos]
-			if !ok {
-				space = NewSpace(pos)
-				m[pos] = space
-			}
-			if space.Wall || space.Visited {
-				continue
-			}
-			if space.Distance > candidate.Distance+1 {
-				space.Distance = candidate.Distance + 1
-				candidates[space.Pos] = true
-			}
-		}
-
-		candidate.Visited = true
 	}
+	log.Fatalln("No more candidate spaces")
+	return Infinity
 }
 
 func main() {

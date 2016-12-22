@@ -140,14 +140,46 @@ func (m Maze) ShortestPath(startPos, targetPos Position) uint64 {
 	return Infinity
 }
 
+func (m Maze) ReachableSpaces(startPos Position, maxDistance uint64) int {
+	start := NewSpace(startPos)
+	if start.Wall {
+		log.Fatalln("Error start square is a wall")
+	}
+
+	maxDistance -= 1 // Starting square counts as a step apparently
+
+	count := 1
+	ctx, cancel := context.WithCancel(context.Background())
+	for space := range m.iterateSpaces(ctx, start) {
+		if space.Distance > maxDistance {
+			cancel()
+			return count
+		}
+		count++
+	}
+	// All reachable spaces covered
+	return count
+}
+
 func main() {
 	targetFlag := flag.String("target", "", "Target position")
+	maxDistanceFlag := flag.Int("max-distance", 0, "Count locations reachable within N steps")
 	flag.Parse()
-	targetPos := targetPosition(*targetFlag)
 
-	m := make(Maze)
-	distance := m.ShortestPath(Position{X: 1, Y: 1}, targetPos)
-	fmt.Println("Shortest path:", distance)
+	if *targetFlag != "" {
+		targetPos := targetPosition(*targetFlag)
+
+		m := make(Maze)
+		distance := m.ShortestPath(Position{X: 1, Y: 1}, targetPos)
+		fmt.Println("Shortest path:", distance)
+	}
+
+	maxDistance := uint64(*maxDistanceFlag)
+	if maxDistance > 0 {
+		m := make(Maze)
+		count := m.ReachableSpaces(Position{X: 1, Y: 1}, maxDistance)
+		fmt.Println("Locations reachable in", maxDistance, "steps or fewer:", count)
+	}
 }
 
 func targetPosition(param string) Position {

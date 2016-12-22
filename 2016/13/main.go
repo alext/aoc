@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"flag"
 	"fmt"
@@ -26,7 +27,7 @@ func (p *Position) IsWall() bool {
 }
 
 func (p Position) Neighbours() <-chan Position {
-	ch := make(chan Position, 2)
+	ch := make(chan Position, 4)
 	go func() {
 		if p.X > 0 {
 			ch <- Position{X: p.X - 1, Y: p.Y}
@@ -61,6 +62,36 @@ func NewSpace(p Position) *Space {
 }
 
 type Maze map[Position]*Space
+
+func (m Maze) String() string {
+	const size = 41
+	var plot [size][size]string
+	for x := uint64(0); x < size; x++ {
+		for y := uint64(0); y < size; y++ {
+			p := Position{X: x, Y: y}
+			space, ok := m[p]
+			if !ok {
+				plot[x][y] = " ?"
+				continue
+			}
+			if space.Wall {
+				plot[x][y] = "##"
+			} else if space.Visited {
+				plot[x][y] = fmt.Sprintf("%2d", space.Distance)
+			} else {
+				plot[x][y] = " ."
+			}
+		}
+	}
+	var output bytes.Buffer
+	for y := 0; y < size; y++ {
+		for x := 0; x < size; x++ {
+			output.WriteString(plot[x][y] + " ")
+		}
+		output.WriteRune('\n')
+	}
+	return output.String()
+}
 
 func (m Maze) iterateSpaces(ctx context.Context, start *Space) <-chan *Space {
 	start.Distance = 0
@@ -172,6 +203,7 @@ func main() {
 		m := make(Maze)
 		distance := m.ShortestPath(Position{X: 1, Y: 1}, targetPos)
 		fmt.Println("Shortest path:", distance)
+		fmt.Println(m)
 	}
 
 	maxDistance := uint64(*maxDistanceFlag)
@@ -179,6 +211,7 @@ func main() {
 		m := make(Maze)
 		count := m.ReachableSpaces(Position{X: 1, Y: 1}, maxDistance)
 		fmt.Println("Locations reachable in", maxDistance, "steps or fewer:", count)
+		fmt.Println(m)
 	}
 }
 

@@ -8,7 +8,7 @@ import (
 	"github.com/glenn-brown/golang-pkg-pcre/src/pkg/pcre"
 )
 
-const salt = "ahsbgdzn"
+var salt = "ahsbgdzn"
 
 type Candidate struct {
 	Hash  string
@@ -20,6 +20,16 @@ func (c Candidate) String() string {
 	return fmt.Sprintf("%s triple: %s index: %d", c.Hash, c.Digit, c.Index)
 }
 
+const rounds = 2017 // 2016 + initial hash
+
+func generateHash(index int) string {
+	result := salt + strconv.Itoa(index)
+	for i := 0; i < rounds; i++ {
+		result = fmt.Sprintf("%x", md5.Sum([]byte(result)))
+	}
+	return result
+}
+
 func main() {
 	keys := make([]*Candidate, 0)
 	candidates := make(map[string][]*Candidate)
@@ -29,7 +39,7 @@ func main() {
 		letterx5 = pcre.MustCompile(`(.)\1{4}`, 0)
 	)
 	for i := 0; ; i++ {
-		hash := fmt.Sprintf("%x", md5.Sum([]byte(salt+strconv.Itoa(i))))
+		hash := generateHash(i)
 		matcher := letterx3.MatcherString(hash, 0)
 		if !matcher.Matches() {
 			continue

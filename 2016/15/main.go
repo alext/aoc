@@ -45,4 +45,17 @@ func main() {
 			break
 		}
 	}
+
+	discs = append(discs, &Disc{
+		Index:     discs[len(discs)-1].Index + 1,
+		Positions: 11,
+		Start:     0,
+	})
+
+	for time := 0; true; time++ {
+		if discsAligned(discs, time) {
+			fmt.Println("Discs alligned with extra disc at time:", time)
+			break
+		}
+	}
 }

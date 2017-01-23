@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/md5"
 	"errors"
 	"flag"
@@ -48,35 +49,73 @@ func (p *Position) AvailableMoves(passcode string) <-chan *Position {
 // Represents an as-yet unknown distance
 const Infinity = 999999
 
+func iteratePositions(ctx context.Context, passcode string) <-chan *Position {
+	ch := make(chan *Position)
+	go func() {
+		start := &Position{X: 1, Y: 1}
+		ch <- start
+
+		candidates := make(map[*Position]bool)
+		candidates[start] = true
+
+		for {
+			if len(candidates) == 0 {
+				close(ch)
+				return
+			}
+
+			var (
+				distance  int = Infinity
+				candidate *Position
+			)
+			for pos, _ := range candidates {
+				if len(pos.Path) < distance {
+					candidate = pos
+					distance = len(pos.Path)
+				}
+			}
+			delete(candidates, candidate)
+
+			select {
+			case <-ctx.Done():
+				close(ch)
+				return
+			case ch <- candidate:
+			}
+
+			if !candidate.IsVault() {
+				for pos := range candidate.AvailableMoves(passcode) {
+					candidates[pos] = true
+				}
+			}
+		}
+	}()
+	return ch
+}
+
 func ShortestPath(passcode string) (string, error) {
-	start := &Position{X: 1, Y: 1}
+	ctx, cancel := context.WithCancel(context.Background())
 
-	candidates := make(map[*Position]bool)
-	candidates[start] = true
-
-	for {
-		if len(candidates) == 0 {
-			return "", errors.New("No path found")
-		}
-
-		var (
-			distance  int = Infinity
-			candidate *Position
-		)
-		for pos, _ := range candidates {
-			if len(pos.Path) < distance {
-				candidate = pos
-				distance = len(pos.Path)
-			}
-		}
-		delete(candidates, candidate)
-		for pos := range candidate.AvailableMoves(passcode) {
-			if pos.IsVault() {
-				return pos.Path, nil
-			}
-			candidates[pos] = true
+	for pos := range iteratePositions(ctx, passcode) {
+		if pos.IsVault() {
+			cancel()
+			return pos.Path, nil
 		}
 	}
+	return "", errors.New("No path found")
+}
+
+func LongestPath(passcode string) (int, error) {
+	var longest *Position
+	for pos := range iteratePositions(context.Background(), passcode) {
+		if pos.IsVault() {
+			longest = pos
+		}
+	}
+	if longest == nil {
+		return 0, errors.New("No path found")
+	}
+	return len(longest.Path), nil
 }
 
 func main() {
@@ -89,4 +128,10 @@ func main() {
 		log.Fatalln(err)
 	}
 	fmt.Println("Shortest path:", path)
+
+	length, err := LongestPath(*passcode)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	fmt.Println("Longest path length:", length)
 }

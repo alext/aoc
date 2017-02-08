@@ -117,6 +117,18 @@ func TestRotateOnPosition(t *testing.T) {
 	}
 }
 
+func TestReverseRotateOnPosition(t *testing.T) {
+	input := "abcdefgh"
+	for i := 0; i < 8; i++ {
+		char := string(input[i])
+		rotated := RotateOnPosition(input, char)
+		result := ReverseRotateOnPosition(rotated, char)
+		if result != input {
+			t.Errorf("Want %s, Got %s (char %s)", input, result, char)
+		}
+	}
+}
+
 func TestReversePositions(t *testing.T) {
 	tests := []struct {
 		input  string

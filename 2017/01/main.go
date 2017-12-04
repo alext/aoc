@@ -19,8 +19,9 @@ func main() {
 	})
 
 	total := 0
+	offset := len(digits) / 2
 	for i, d := range digits {
-		j := (i + 1) % len(digits)
+		j := (i + offset) % len(digits)
 		if d == digits[j] {
 			total += d
 		}

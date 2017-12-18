@@ -80,7 +80,7 @@ func (n *Navigator) Move(turn string, steps int) bool {
 }
 
 func (n *Navigator) Distance() int {
-	return absInt(n.pos.x) + absInt(n.pos.y)
+	return helpers.AbsInt(n.pos.x) + helpers.AbsInt(n.pos.y)
 }
 
 func (n *Navigator) String() string {
@@ -114,11 +114,4 @@ func main() {
 		fmt.Println("Step:", n)
 	})
 	fmt.Println("Final pos:", n)
-}
-
-func absInt(n int) int {
-	if n < 0 {
-		return -n
-	}
-	return n
 }

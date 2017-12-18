@@ -12,30 +12,46 @@ func main() {
 	flag.Parse()
 
 	ringWidth, offset := calculateRingSizeAndOffset(*location)
-	distance := calculateDistance(ringWidth, offset)
+	x, y := locationPosition(*location)
+	distance := helpers.AbsInt(x) + helpers.AbsInt(y)
 	fmt.Println("Ring:", ringWidth, "Offset:", offset)
 	fmt.Println("Distance:", distance)
 }
 
-func calculateDistance(ringSize, offset int) int {
-	axisRadius := (ringSize - 1) / 2
-	return axisRadius + calculateDistanceFromAxis(ringSize, offset)
-}
-
-func calculateDistanceFromAxis(ringSize, offset int) int {
-	if ringSize == 1 {
-		return 0
+func locationPosition(location int) (x, y int) {
+	if location == 1 {
+		return 0, 0
 	}
-	ringRadius := (ringSize - 1) / 2
-	sidePos := offset % (ringSize - 1)
+	ringSize, offset := calculateRingSizeAndOffset(location)
 
-	return helpers.AbsInt(sidePos - ringRadius)
+	ringRadius := (ringSize - 1) / 2
+
+	side := (offset - 1) / (ringSize - 1)
+	sidePos := (offset-1)%(ringSize-1) - (ringRadius - 1)
+
+	switch side {
+	case 0:
+		x = ringRadius
+		y = sidePos
+	case 1:
+		x = -sidePos
+		y = ringRadius
+	case 2:
+		x = -ringRadius
+		y = -sidePos
+	case 3:
+		x = sidePos
+		y = -ringRadius
+	default:
+		panic("Square with more than 4 sides")
+	}
+	return x, y
 }
 
 func calculateRingSizeAndOffset(location int) (width int, remainder int) {
 	remainder = location
 	for width = 1; true; width += 2 {
-		size := ringSize(width)
+		size := ringSizeForWidth(width)
 		if size >= remainder {
 			break
 		}
@@ -44,7 +60,7 @@ func calculateRingSizeAndOffset(location int) (width int, remainder int) {
 	return width, remainder
 }
 
-func ringSize(width int) int {
+func ringSizeForWidth(width int) int {
 	if width == 1 {
 		return 1
 	}

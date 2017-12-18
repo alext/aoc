@@ -2,6 +2,57 @@ package main
 
 import "testing"
 
+func TestLocationPosition(t *testing.T) {
+	tests := []struct {
+		location  int
+		expectedX int
+		expectedY int
+	}{
+		{
+			location:  1,
+			expectedX: 0,
+			expectedY: 0,
+		},
+		{
+			location:  2,
+			expectedX: 1,
+			expectedY: 0,
+		},
+		{
+			location:  5,
+			expectedX: -1,
+			expectedY: 1,
+		},
+		{
+			location:  10,
+			expectedX: 2,
+			expectedY: -1,
+		},
+		{
+			location:  13,
+			expectedX: 2,
+			expectedY: 2,
+		},
+		{
+			location:  17,
+			expectedX: -2,
+			expectedY: 2,
+		},
+		{
+			location:  22,
+			expectedX: -1,
+			expectedY: -2,
+		},
+	}
+
+	for _, test := range tests {
+		actualX, actualY := locationPosition(test.location)
+		if actualX != test.expectedX || actualY != test.expectedY {
+			t.Errorf("Location %d, expected: (%d,%d), got: (%d,%d)", test.location, test.expectedX, test.expectedY, actualX, actualY)
+		}
+	}
+}
+
 func TestDistance(t *testing.T) {
 	tests := []struct {
 		ringSize int
@@ -150,7 +201,7 @@ func TestRingSizeAndOffset(t *testing.T) {
 	}
 }
 
-func TestRingSize(t *testing.T) {
+func TestRingSizeForWidth(t *testing.T) {
 	tests := []struct {
 		width    int
 		expected int
@@ -170,7 +221,7 @@ func TestRingSize(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		actual := ringSize(test.width)
+		actual := ringSizeForWidth(test.width)
 		if actual != test.expected {
 			t.Errorf("Width %d: Want %d, got %d", test.width, test.expected, actual)
 		}

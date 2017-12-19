@@ -46,9 +46,9 @@ func TestLocationPosition(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		actualX, actualY := locationPosition(test.location)
-		if actualX != test.expectedX || actualY != test.expectedY {
-			t.Errorf("Location %d, expected: (%d,%d), got: (%d,%d)", test.location, test.expectedX, test.expectedY, actualX, actualY)
+		actual := locationPosition(test.location)
+		if actual.X != test.expectedX || actual.Y != test.expectedY {
+			t.Errorf("Location %d, expected: (%d,%d), got: (%d,%d)", test.location, test.expectedX, test.expectedY, actual.X, actual.Y)
 		}
 	}
 }

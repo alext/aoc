@@ -7,20 +7,51 @@ import (
 	"github.com/alext/aoc/helpers"
 )
 
+type Pos struct {
+	X int
+	Y int
+}
+
+func (p Pos) Distance() int {
+	return helpers.AbsInt(p.X) + helpers.AbsInt(p.Y)
+}
+
 func main() {
 	location := flag.Int("location", 0, "The memory location")
 	flag.Parse()
 
 	ringWidth, offset := calculateRingSizeAndOffset(*location)
-	x, y := locationPosition(*location)
-	distance := helpers.AbsInt(x) + helpers.AbsInt(y)
+	pos := locationPosition(*location)
 	fmt.Println("Ring:", ringWidth, "Offset:", offset)
-	fmt.Println("Distance:", distance)
+	fmt.Println("Distance:", pos.Distance())
+
+	data := make(map[Pos]int)
+	data[Pos{0, 0}] = 1
+	for i := 2; true; i++ {
+		p := locationPosition(i)
+		data[p] = sumSurrounding(data, p)
+		if data[p] > *location {
+			fmt.Printf("Value %d at location %d (%d,%d)\n", data[p], i, p.X, p.Y)
+			break
+		}
+		fmt.Println("Value:", data[p])
+	}
 }
 
-func locationPosition(location int) (x, y int) {
+func sumSurrounding(data map[Pos]int, pos Pos) int {
+	sum := 0
+	for i := -1; i < 2; i++ {
+		for j := -1; j < 2; j++ {
+			p := Pos{X: pos.X + i, Y: pos.Y + j}
+			sum += data[p]
+		}
+	}
+	return sum
+}
+
+func locationPosition(location int) (pos Pos) {
 	if location == 1 {
-		return 0, 0
+		return Pos{0, 0}
 	}
 	ringSize, offset := calculateRingSizeAndOffset(location)
 
@@ -31,21 +62,21 @@ func locationPosition(location int) (x, y int) {
 
 	switch side {
 	case 0:
-		x = ringRadius
-		y = sidePos
+		pos.X = ringRadius
+		pos.Y = sidePos
 	case 1:
-		x = -sidePos
-		y = ringRadius
+		pos.X = -sidePos
+		pos.Y = ringRadius
 	case 2:
-		x = -ringRadius
-		y = -sidePos
+		pos.X = -ringRadius
+		pos.Y = -sidePos
 	case 3:
-		x = sidePos
-		y = -ringRadius
+		pos.X = sidePos
+		pos.Y = -ringRadius
 	default:
 		panic("Square with more than 4 sides")
 	}
-	return x, y
+	return pos
 }
 
 func calculateRingSizeAndOffset(location int) (width int, remainder int) {

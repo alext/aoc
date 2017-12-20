@@ -41,17 +41,22 @@ func main() {
 	helpers.ScanWrapper(os.Stdin, bufio.ScanWords, func(word string) {
 		m = append(m, helpers.MustAtoi(word))
 	})
-	seen := make(map[uint32]bool)
-	seen[m.Checksum()] = true
+	seen := make(map[uint32]uint8)
+	seen[m.Checksum()] = 1
 
+	var firstCount, secondCount int
 	for count := 1; true; count++ {
 		m.Redistribute()
 		c := m.Checksum()
-		if seen[c] {
-			fmt.Printf("Duplicate configuration after %d cycles\n", count)
+		if firstCount == 0 && seen[c] > 0 {
+			firstCount = count
+		}
+		if seen[c] > 1 {
+			secondCount = count
 			break
 		}
-		seen[c] = true
+		seen[c]++
 	}
-
+	fmt.Printf("First duplicate configuration after %d cycles\n", firstCount)
+	fmt.Printf("Second duplicate configuration after %d more cycles\n", secondCount-firstCount)
 }

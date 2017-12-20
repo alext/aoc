@@ -14,7 +14,11 @@ type Program struct {
 
 func (p *Program) Step() {
 	nextPC := p.PC + p.Instructions[p.PC]
-	p.Instructions[p.PC]++
+	if p.Instructions[p.PC] >= 3 {
+		p.Instructions[p.PC]--
+	} else {
+		p.Instructions[p.PC]++
+	}
 	p.PC = nextPC
 }
 

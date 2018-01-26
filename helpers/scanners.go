@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"io"
 	"log"
+	"strings"
 )
 
 func ScanLines(in io.Reader, lineProcessor func(string)) {
@@ -23,4 +24,15 @@ func ScanWrapper(in io.Reader, split bufio.SplitFunc, processor func(string)) {
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func SplitCSV(input string) []string {
+	if input == "" {
+		return []string{}
+	}
+	parts := strings.Split(input, ",")
+	for i, _ := range parts {
+		parts[i] = strings.TrimSpace(parts[i])
+	}
+	return parts
 }

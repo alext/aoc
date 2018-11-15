@@ -15,6 +15,15 @@ func ScanRunes(in io.Reader, runeProcessor func(string)) {
 	ScanWrapper(in, bufio.ScanRunes, runeProcessor)
 }
 
+func StreamRunes(in io.Reader) <-chan string {
+	ch := make(chan string)
+	go func() {
+		ScanWrapper(in, bufio.ScanRunes, func(r string) { ch <- r })
+		close(ch)
+	}()
+	return ch
+}
+
 func ScanWrapper(in io.Reader, split bufio.SplitFunc, processor func(string)) {
 	scanner := bufio.NewScanner(in)
 	scanner.Split(split)

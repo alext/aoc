@@ -76,7 +76,7 @@ func (gl *GuardLog) TotalMinutes() int {
 	return total
 }
 
-func (gl *GuardLog) SleepiestMinute() int {
+func (gl *GuardLog) SleepiestMinute() (int, int) {
 	minute := 0
 	maxSleep := 0
 	for i, m := range gl.Minutes {
@@ -85,7 +85,7 @@ func (gl *GuardLog) SleepiestMinute() int {
 			maxSleep = m
 		}
 	}
-	return minute
+	return minute, maxSleep
 }
 
 type GuardLogs map[int]*GuardLog
@@ -111,6 +111,21 @@ func (gls GuardLogs) Sleepiest() *GuardLog {
 	return sleepiest
 }
 
+func (gls GuardLogs) Sleepiest2() (*GuardLog, int) {
+	maxAmount := 0
+	var gl *GuardLog
+	var minute int
+	for _, g := range gls {
+		min, amount := g.SleepiestMinute()
+		if amount > maxAmount {
+			maxAmount = amount
+			gl = g
+			minute = min
+		}
+	}
+	return gl, minute
+}
+
 func main() {
 	entries := make([]Entry, 0)
 	helpers.ScanLines(os.Stdin, func(line string) {
@@ -128,7 +143,13 @@ func main() {
 		gls.AddEntry(e)
 	}
 	sleepiest := gls.Sleepiest()
+	sleepiestMinute, _ := sleepiest.SleepiestMinute()
 	fmt.Println("Sleepiest Guard:", sleepiest.Guard)
-	fmt.Println("Sleepiest Minute:", sleepiest.SleepiestMinute())
-	fmt.Println("Result:", sleepiest.Guard*sleepiest.SleepiestMinute())
+	fmt.Println("Sleepiest Minute:", sleepiestMinute)
+	fmt.Println("Result:", sleepiest.Guard*sleepiestMinute)
+
+	sleepiest, sleepiestMinute = gls.Sleepiest2()
+	fmt.Println("Sleepiest Guard2:", sleepiest.Guard)
+	fmt.Println("Sleepiest Minute2:", sleepiestMinute)
+	fmt.Println("Result2:", sleepiest.Guard*sleepiestMinute)
 }

@@ -139,18 +139,31 @@ func main() {
 	})
 
 	winningScore := 0
-Loop:
+	lastScore := 0
+	var lastBoard *Board
 	for _, call := range calls {
+		var remainingBoards []*Board
 		for _, b := range boards {
 			if b.Play(call) {
-				fmt.Println("Winning board")
-				fmt.Println(b)
-				winningScore = b.Score(call)
-				break Loop
+				if winningScore == 0 {
+					fmt.Println("Winning board")
+					fmt.Println(b)
+					winningScore = b.Score(call)
+				}
+				lastScore = b.Score(call)
+				lastBoard = b
+			} else {
+				remainingBoards = append(remainingBoards, b)
 			}
 		}
+		boards = remainingBoards
 	}
 	if winningScore != 0 {
 		fmt.Println("Winning score:", winningScore)
+	}
+	if lastScore != 0 {
+		fmt.Println("Last winning board")
+		fmt.Println(lastBoard)
+		fmt.Println("Last winning score:", lastScore)
 	}
 }

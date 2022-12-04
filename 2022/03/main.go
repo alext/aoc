@@ -3,12 +3,13 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/bits"
 	"os"
 
 	"github.com/alext/aoc/helpers"
 )
 
-type Item uint8
+type Item uint
 
 func ParseItem(letter byte) Item {
 	if letter >= 'a' && letter <= 'z' {
@@ -31,7 +32,8 @@ func (i Item) String() string {
 }
 
 type Rucksack struct {
-	items []Item
+	left  uint
+	right uint
 }
 
 func NewRucksack(input string) *Rucksack {
@@ -39,43 +41,37 @@ func NewRucksack(input string) *Rucksack {
 		log.Fatalln("Not an even number of items", input)
 	}
 	var r Rucksack
+	half := len(input) / 2
 	for i := 0; i < len(input); i++ {
 		item := ParseItem(input[i])
-		r.items = append(r.items, item)
+		if i < half {
+			r.left |= 1 << item
+		} else {
+			r.right |= 1 << item
+		}
 	}
 	return &r
 }
 
 func (r Rucksack) CommonItem() Item {
-	half := len(r.items) / 2
-	for i := 0; i < half; i++ {
-		for j := half; j < len(r.items); j++ {
-			if r.items[i] == r.items[j] {
-				return r.items[i]
-			}
-		}
+	combine := r.left & r.right
+	if combine == 0 {
+		log.Fatal("No common items in rucksack")
 	}
-	panic("No common items in rucksack")
+	return Item(bits.TrailingZeros(combine))
 }
 
 type Group []*Rucksack
 
 func (g Group) CommonItem() Item {
-	if len(g) != 3 {
-		log.Fatalln("Group should have 3 members, got", len(g))
+	var combine uint = ^uint(0) // All ones
+	for _, r := range g {
+		combine &= r.left | r.right
 	}
-	for _, i := range g[0].items {
-		for _, j := range g[1].items {
-			if i == j {
-				for _, k := range g[2].items {
-					if i == k {
-						return k
-					}
-				}
-			}
-		}
+	if combine == 0 {
+		log.Fatal("No common items in group")
 	}
-	panic("No common item in group")
+	return Item(bits.TrailingZeros(combine))
 }
 
 func main() {

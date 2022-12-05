@@ -11,14 +11,22 @@ func ScanLines(in io.Reader, lineProcessor func(string)) {
 	ScanWrapper(in, bufio.ScanLines, lineProcessor)
 }
 
+func StreamLines(in io.Reader) <-chan string {
+	return stream(in, bufio.ScanLines)
+}
+
 func ScanRunes(in io.Reader, runeProcessor func(string)) {
 	ScanWrapper(in, bufio.ScanRunes, runeProcessor)
 }
 
 func StreamRunes(in io.Reader) <-chan string {
+	return stream(in, bufio.ScanRunes)
+}
+
+func stream(in io.Reader, split bufio.SplitFunc) <-chan string {
 	ch := make(chan string)
 	go func() {
-		ScanWrapper(in, bufio.ScanRunes, func(r string) { ch <- r })
+		ScanWrapper(in, split, func(r string) { ch <- r })
 		close(ch)
 	}()
 	return ch

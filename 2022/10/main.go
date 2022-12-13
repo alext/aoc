@@ -35,6 +35,7 @@ type CPU struct {
 	Instructions []Instruction
 	X            int
 	Cycles       int
+	screen       []bool
 }
 
 func NewCPU() *CPU {
@@ -58,6 +59,12 @@ func (c *CPU) ExecuteTo(target int) {
 		panic("Not enough instructions")
 	}
 	for c.Cycles < target {
+		screenPos := c.Cycles // Screen pos is 0 indexed
+		if helpers.AbsInt(c.X-(screenPos%40)) <= 1 {
+			c.screen = append(c.screen, true)
+		} else {
+			c.screen = append(c.screen, false)
+		}
 		c.Cycles++
 		i := c.Instructions[c.Cycles-1]
 		fmt.Printf("Executing %v (cycle %d)\n", i, c.Cycles)
@@ -72,6 +79,21 @@ func (c *CPU) SignalStrengthDuringCycle(cycle int) int {
 	return strength
 }
 
+func (c *CPU) ScreenOutput() string {
+	s := &strings.Builder{}
+	for i, lit := range c.screen {
+		if i > 0 && i%40 == 0 {
+			s.WriteString("\n")
+		}
+		if lit {
+			s.WriteRune('#')
+		} else {
+			s.WriteRune('.')
+		}
+	}
+	return s.String()
+}
+
 func main() {
 	c := NewCPU()
 
@@ -84,4 +106,7 @@ func main() {
 		total += c.SignalStrengthDuringCycle(n)
 	}
 	fmt.Println("Total of signal strengths", total)
+
+	c.ExecuteTo(240)
+	fmt.Println(c.ScreenOutput())
 }

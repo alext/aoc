@@ -30,7 +30,7 @@ func (m Monkey) String() string {
 	)
 }
 
-func (m *Monkey) TakeTurn(monkeys Monkeys) {
+func (m *Monkey) TakeTurn(monkeys Monkeys, productDivisors int, hasRelief bool) {
 	for _, item := range m.Items {
 		worry := 0
 		switch m.Op {
@@ -43,7 +43,11 @@ func (m *Monkey) TakeTurn(monkeys Monkeys) {
 		default:
 			log.Fatalln("Unexpected Op:", m.Op)
 		}
-		worry = worry / 3
+		if hasRelief {
+			worry = worry / 3
+		}
+		// keep worry manageable
+		worry = worry % productDivisors
 		if worry%m.Divisible == 0 {
 			monkeys[m.TrueMonkey].Items = append(monkeys[m.TrueMonkey].Items, worry)
 		} else {
@@ -56,10 +60,19 @@ func (m *Monkey) TakeTurn(monkeys Monkeys) {
 
 type Monkeys []*Monkey
 
-func (m Monkeys) Round() {
+func (m Monkeys) Round(productDivisors int, hasRelief bool) {
 	for i := range m {
-		m[i].TakeTurn(m)
+		m[i].TakeTurn(m, productDivisors, hasRelief)
 	}
+}
+
+func (m Monkeys) MonkeyBusiness() int {
+	var inspections []int
+	for _, mky := range m {
+		inspections = append(inspections, mky.Inspections)
+	}
+	sort.Sort(sort.Reverse(sort.IntSlice(inspections)))
+	return inspections[0] * inspections[1]
 }
 
 func main() {
@@ -101,19 +114,25 @@ func main() {
 		}
 	})
 	monkeys = append(monkeys, m)
+	monkeys2 := make(Monkeys, 0, len(monkeys))
+	productDivisors := 1
+	for _, m := range monkeys {
+		m2 := *m
+		monkeys2 = append(monkeys2, &m2)
+		productDivisors *= m.Divisible
+	}
 
 	fmt.Println("Initial monkeys:", monkeys)
 
 	for i := 0; i < 20; i++ {
-		monkeys.Round()
+		monkeys.Round(productDivisors, true)
 	}
 
-	var inspections []int
-	for _, m := range monkeys {
-		inspections = append(inspections, m.Inspections)
-	}
-	sort.Sort(sort.Reverse(sort.IntSlice(inspections)))
+	fmt.Println("Monkey business:", monkeys.MonkeyBusiness())
 
-	fmt.Println("Inspections:", inspections)
-	fmt.Println("Monkey business:", inspections[0]*inspections[1])
+	for i := 1; i <= 10_000; i++ {
+		monkeys2.Round(productDivisors, false)
+	}
+
+	fmt.Println("Monkey business2:", monkeys2.MonkeyBusiness())
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
 	"strconv"
 
 	"github.com/alext/aoc/helpers"
@@ -115,6 +116,7 @@ func main() {
 	in := helpers.StreamRunes(os.Stdin)
 	index := 1
 	indexSum := 0
+	var packets []*List
 	for {
 		consume(in, "[")
 		l1 := ParseList(in)
@@ -129,6 +131,8 @@ func main() {
 			indexSum += index
 		}
 
+		packets = append(packets, l1, l2)
+
 		c, ok := <-in
 		if !ok {
 			// end of input
@@ -141,4 +145,24 @@ func main() {
 	}
 
 	fmt.Println("IndexSum", indexSum)
+
+	d1 := &List{&Value{List: &List{&Value{Number: 2}}}}
+	d2 := &List{&Value{List: &List{&Value{Number: 6}}}}
+	packets = append(packets, d1, d2)
+
+	sort.Slice(packets, func(i, j int) bool {
+		return packets[i].Cmp(*packets[j]) < 0
+	})
+
+	key := 0
+	for i, p := range packets {
+		if p == d1 {
+			key = i + 1
+		}
+		if p == d2 {
+			key *= i + 1
+			break
+		}
+	}
+	fmt.Println("Key", key)
 }

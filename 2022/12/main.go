@@ -32,7 +32,7 @@ func (s Square) Visited() bool {
 	return s.Distance >= 0
 }
 
-func (s *Square) PossibleMoves(m *Map) []*Square {
+func (s *Square) getMoves(m *Map, test func(*Square) bool) []*Square {
 	var moves []*Square
 	for _, neighbour := range []*Square{
 		m.GetSquare(s.Row+1, s.Col),
@@ -43,17 +43,43 @@ func (s *Square) PossibleMoves(m *Map) []*Square {
 		if neighbour == nil {
 			continue
 		}
-		if neighbour.Height-s.Height <= 1 {
+		if test(neighbour) {
 			moves = append(moves, neighbour)
 		}
 	}
 	return moves
 }
 
+func (s *Square) PossibleMoves(m *Map) []*Square {
+	return s.getMoves(
+		m,
+		func(neighbour *Square) bool {
+			return neighbour.Height-s.Height <= 1
+		},
+	)
+}
+
+func (s *Square) PossibleMovesReverse(m *Map) []*Square {
+	return s.getMoves(
+		m,
+		func(neighbour *Square) bool {
+			return s.Height-neighbour.Height <= 1
+		},
+	)
+}
+
 type Map struct {
 	Squares [][]*Square
 	Start   *Square
 	End     *Square
+}
+
+func (m *Map) Reset() {
+	for _, row := range m.Squares {
+		for _, s := range row {
+			s.Distance = -1
+		}
+	}
 }
 
 func (m *Map) GetSquare(row, col int) *Square {
@@ -66,19 +92,19 @@ func (m *Map) GetSquare(row, col int) *Square {
 	return m.Squares[row][col]
 }
 
-func (m *Map) ShortestPath() int {
+func (m *Map) findPath(start *Square, getMoves func(*Square) []*Square, test func(*Square) bool) int {
 	var currentList, nextList []*Square
-	m.Start.Distance = 0
-	currentList = append(currentList, m.Start)
+	start.Distance = 0
+	currentList = append(currentList, start)
 
 	for len(currentList) > 0 {
 		for _, current := range currentList {
-			for _, neighbour := range current.PossibleMoves(m) {
+			for _, neighbour := range getMoves(current) {
 				if neighbour.Visited() {
 					continue
 				}
 				neighbour.Distance = current.Distance + 1
-				if neighbour == m.End {
+				if test(neighbour) {
 					return neighbour.Distance
 				}
 				nextList = append(nextList, neighbour)
@@ -133,4 +159,8 @@ func main() {
 	})
 
 	fmt.Println("Shortest distance", m.ShortestPath())
+
+	m.Reset()
+
+	fmt.Println("Shortest distance from any a", m.ShortestPathAny())
 }

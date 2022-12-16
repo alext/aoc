@@ -27,6 +27,8 @@ type Grid struct {
 	MinX      int
 	MaxX      int
 	MaxY      int
+	MaxRockY  int
+	HasFloor  bool
 	SandCount int
 }
 
@@ -52,6 +54,12 @@ func (g *Grid) String() string {
 		}
 		b.WriteString("\n")
 	}
+	if g.HasFloor {
+		for x := g.MinX; x <= g.MaxX; x++ {
+			b.WriteString("#")
+		}
+		b.WriteString("\n")
+	}
 	return b.String()
 }
 
@@ -65,10 +73,23 @@ func (g *Grid) setPos(p Pos, v string) {
 	}
 	if p.Y > g.MaxY {
 		g.MaxY = p.Y
+		if v == "#" {
+			g.MaxRockY = g.MaxY
+		}
 	}
 	if v == "o" {
 		g.SandCount++
 	}
+}
+
+func (g *Grid) hasPos(p Pos) bool {
+	if _, found := g.Positions[p]; found {
+		return true
+	}
+	if g.HasFloor && p.Y == g.MaxRockY+2 {
+		return true
+	}
+	return false
 }
 
 func (g *Grid) AddRock(corners []Pos) {
@@ -94,19 +115,23 @@ func (g *Grid) AddRock(corners []Pos) {
 
 func (g *Grid) AddSand() bool {
 	sandPos := Pos{X: 500, Y: 0}
-	for sandPos.Y <= g.MaxY {
+	if g.hasPos(sandPos) {
+		// nozzle blocked
+		return false
+	}
+	for sandPos.Y <= g.MaxY+2 {
 		testPos := Pos{X: sandPos.X, Y: sandPos.Y + 1}
-		if _, found := g.Positions[testPos]; !found {
+		if !g.hasPos(testPos) {
 			sandPos = testPos
 			continue
 		}
 		testPos.X = sandPos.X - 1
-		if _, found := g.Positions[testPos]; !found {
+		if !g.hasPos(testPos) {
 			sandPos = testPos
 			continue
 		}
 		testPos.X = sandPos.X + 1
-		if _, found := g.Positions[testPos]; !found {
+		if !g.hasPos(testPos) {
 			sandPos = testPos
 			continue
 		}
@@ -129,6 +154,16 @@ func main() {
 	})
 
 	fmt.Println(g)
+	for {
+		landed := g.AddSand()
+		if !landed {
+			break
+		}
+	}
+	fmt.Println(g)
+	fmt.Println("SandCount", g.SandCount)
+
+	g.HasFloor = true
 	for {
 		landed := g.AddSand()
 		if !landed {

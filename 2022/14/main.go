@@ -9,18 +9,7 @@ import (
 	"github.com/alext/aoc/helpers"
 )
 
-type Pos struct {
-	X int
-	Y int
-}
-
-func ParsePos(in string) Pos {
-	x, y, _ := strings.Cut(in, ",")
-	return Pos{
-		X: helpers.MustAtoi(x),
-		Y: helpers.MustAtoi(y),
-	}
-}
+type Pos = helpers.Pos
 
 type Grid struct {
 	Positions map[Pos]string
@@ -148,7 +137,7 @@ func main() {
 	helpers.ScanLines(os.Stdin, func(line string) {
 		var corners []Pos
 		for _, corner := range strings.Split(line, " -> ") {
-			corners = append(corners, ParsePos(corner))
+			corners = append(corners, helpers.ParsePos(corner))
 		}
 		g.AddRock(corners)
 	})

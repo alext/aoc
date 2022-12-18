@@ -22,11 +22,34 @@ func (s Sensor) String() string {
 	return fmt.Sprintf("Sensor: %s, Beacon: %s", s.Pos, s.Beacon)
 }
 
-func (s Sensor) PositionClear(p Pos) bool {
-	if p == s.Beacon {
-		return false
-	}
+func (s Sensor) PositionInRange(p Pos) bool {
 	return s.Pos.DistanceTo(p) <= s.BeaconDistance
+}
+
+func (s Sensor) PerimeterPositions() []Pos {
+	var positions []Pos
+	p := Pos{X: s.Pos.X + s.BeaconDistance + 1, Y: s.Pos.Y}
+	for p.X > s.Pos.X {
+		positions = append(positions, p)
+		p.X -= 1
+		p.Y += 1
+	}
+	for p.Y > s.Pos.Y {
+		positions = append(positions, p)
+		p.Y -= 1
+		p.X -= 1
+	}
+	for p.X < s.Pos.X {
+		positions = append(positions, p)
+		p.X += 1
+		p.Y -= 1
+	}
+	for p.Y < s.Pos.Y {
+		positions = append(positions, p)
+		p.Y += 1
+		p.X += 1
+	}
+	return positions
 }
 
 type Grid struct {
@@ -36,13 +59,26 @@ type Grid struct {
 }
 
 func (g *Grid) String() string {
+	if g.Max.X > 100 || g.Max.Y > 100 {
+		return "Too big to print"
+	}
 	positions := make(map[Pos]string)
 	for _, s := range g.Sensors {
 		positions[s.Pos] = "S"
 		positions[s.Beacon] = "B"
 	}
 	b := &strings.Builder{}
+	b.WriteString("   ")
+	for x := g.Min.X; x <= g.Max.X; x++ {
+		if x == 0 {
+			b.WriteString("0")
+		} else {
+			b.WriteString(" ")
+		}
+	}
+	b.WriteString("\n")
 	for y := g.Min.Y; y <= g.Max.Y; y++ {
+		fmt.Fprintf(b, "%03d", y)
 		for x := g.Min.X; x <= g.Max.X; x++ {
 			if ch, ok := positions[Pos{X: x, Y: y}]; ok {
 				b.WriteString(ch)
@@ -82,7 +118,10 @@ func (g *Grid) CountClearSpots(row int) int {
 		p := Pos{X: x, Y: row}
 		clear := false
 		for _, s := range g.Sensors {
-			if s.PositionClear(p) {
+			if p == s.Beacon {
+				continue
+			}
+			if s.PositionInRange(p) {
 				clear = true
 				break
 			}
@@ -92,6 +131,30 @@ func (g *Grid) CountClearSpots(row int) int {
 		}
 	}
 	return count
+}
+
+func (g *Grid) FindPossibleBeacon(max int) Pos {
+	for _, sensor := range g.Sensors {
+		for _, p := range sensor.PerimeterPositions() {
+			if p.X < 0 || p.Y < 0 || p.X > max || p.Y > max {
+				continue
+			}
+			inRange := false
+			for _, otherSensor := range g.Sensors {
+				if sensor == otherSensor {
+					continue
+				}
+				if otherSensor.PositionInRange(p) {
+					inRange = true
+					break
+				}
+			}
+			if !inRange {
+				return p
+			}
+		}
+	}
+	panic("Failed to find possible beacon")
 }
 
 func main() {
@@ -116,6 +179,10 @@ func main() {
 	fmt.Println("Min", g.Min)
 	fmt.Println("Max", g.Max)
 
-	//fmt.Println(g)
+	fmt.Println(g)
 	fmt.Printf("ClearSpots on y=%d: %d\n", *checkRow, g.CountClearSpots(*checkRow))
+
+	b := g.FindPossibleBeacon(*checkRow * 2)
+	fmt.Printf("Possible beacon within 0-%d: %s\n", *checkRow*2, b)
+	fmt.Println("Tuning frequency:", b.X*4_000_000+b.Y)
 }

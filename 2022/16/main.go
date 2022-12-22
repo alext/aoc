@@ -169,7 +169,7 @@ func (m *Move) NextMoves() []*Move {
 	return moves
 }
 
-func MostPressureRelease(valves map[string]*Valve, withElephant bool) int {
+func MostPressureReleaseBFS(valves map[string]*Valve, withElephant bool) int {
 	candidateMoves := []*Move{CreateInitialMove(valves, withElephant)}
 	var nextMoves []*Move
 	bestResult := 0
@@ -195,6 +195,26 @@ func MostPressureRelease(valves map[string]*Valve, withElephant bool) int {
 	}
 
 	return bestResult
+}
+
+func mostReleaseFromMove(move *Move, currentBest int) int {
+	if move.PressureReleased > currentBest {
+		fmt.Println("New best move", move)
+		currentBest = move.PressureReleased
+	}
+	for _, next := range move.NextMoves() {
+		if next.CannotBeat(currentBest) {
+			movePool.Put(next)
+			continue
+		}
+		currentBest = mostReleaseFromMove(next, currentBest)
+		movePool.Put(next)
+	}
+	return currentBest
+}
+
+func MostPressureReleaseDFS(valves map[string]*Valve, withElephant bool) int {
+	return mostReleaseFromMove(CreateInitialMove(valves, withElephant), 0)
 }
 
 func parseInput(in io.Reader) map[string]*Valve {
@@ -229,7 +249,7 @@ func main() {
 	valves := parseInput(os.Stdin)
 	//fmt.Println(valves)
 
-	fmt.Println("Most pressure release possible:", MostPressureRelease(valves, false))
+	fmt.Println("Most pressure release possible:", MostPressureReleaseDFS(valves, false))
 
-	fmt.Println("Most pressure release with elephant:", MostPressureRelease(valves, true))
+	fmt.Println("Most pressure release with elephant:", MostPressureReleaseDFS(valves, true))
 }

@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/alext/aoc/helpers"
 )
@@ -97,8 +98,11 @@ func CreateInitialMove(valves map[string]*Valve, withElephant bool) *Move {
 	return m
 }
 
+// Global variable to save allocations - means this can't be used multi-threaded though.
+var rates []int
+
 func (m *Move) CannotBeat(currentBest int) bool {
-	rates := make([]int, 0, len(m.RemainingValves))
+	rates = rates[:0]
 	for v, _ := range m.RemainingValves {
 		rates = append(rates, v.FlowRate)
 	}
@@ -115,15 +119,19 @@ func (m *Move) CannotBeat(currentBest int) bool {
 	return currentBest >= potentialBest
 }
 
+var movePool = sync.Pool{New: func() any { return &Move{RemainingValves: make(map[*Valve]bool)} }}
+
 func (m *Move) CreateNext(nextValve *Valve, elephantMove bool) *Move {
-	next := &Move{
-		Current:          m.Current,
-		TimeRemaining:    m.TimeRemaining,
-		ECurrent:         m.ECurrent,
-		ETimeRemaining:   m.ETimeRemaining,
-		PressureReleased: m.PressureReleased,
-		RemainingValves:  make(map[*Valve]bool, len(m.RemainingValves)-1),
+	next := movePool.Get().(*Move)
+	// Clear any values from previous usages
+	for v := range next.RemainingValves {
+		delete(next.RemainingValves, v)
 	}
+	next.Current = m.Current
+	next.TimeRemaining = m.TimeRemaining
+	next.ECurrent = m.ECurrent
+	next.ETimeRemaining = m.ETimeRemaining
+	next.PressureReleased = m.PressureReleased
 	if elephantMove {
 		next.ETimeRemaining = m.ETimeRemaining - m.ECurrent.DistanceTo(nextValve) - 1 // distance minutes +1 more to open valve
 		next.ECurrent = nextValve
@@ -180,9 +188,10 @@ func MostPressureRelease(valves map[string]*Valve, withElephant bool) int {
 				}
 				nextMoves = append(nextMoves, next)
 			}
+			movePool.Put(move)
 		}
-		candidateMoves = nextMoves
-		nextMoves = nil
+		candidateMoves = append(candidateMoves[:0], nextMoves...)
+		nextMoves = nextMoves[:0]
 	}
 
 	return bestResult

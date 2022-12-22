@@ -59,9 +59,9 @@ func (v *Valve) DistanceTo(other *Valve) int {
 }
 
 type Move struct {
-	Minute           int
+	TimeRemaining    int
 	Current          *Valve
-	OpenValves       map[string]bool
+	RemainingValves  map[*Valve]bool
 	PressureReleased int
 }
 
@@ -69,32 +69,45 @@ func (m *Move) String() string {
 	return fmt.Sprintf("%s total:%d", m.Current.Label, m.PressureReleased)
 }
 
+func CreateInitialMove(valves map[string]*Valve) *Move {
+	m := &Move{
+		TimeRemaining:   30,
+		Current:         valves["AA"],
+		RemainingValves: make(map[*Valve]bool),
+	}
+	for _, valve := range valves {
+		if valve.FlowRate > 0 {
+			m.RemainingValves[valve] = true
+		}
+	}
+	return m
+}
+
 func (m *Move) CreateNext(nextValve *Valve) *Move {
 	distance := m.Current.DistanceTo(nextValve)
 	next := &Move{
-		Minute:           m.Minute + distance + 1, // distance minutes + 1 to open
+		TimeRemaining:    m.TimeRemaining - distance - 1, // distance minutes +1 more to open valve
 		Current:          nextValve,
-		OpenValves:       make(map[string]bool, len(m.OpenValves)+1),
+		RemainingValves:  make(map[*Valve]bool, len(m.RemainingValves)-1),
 		PressureReleased: m.PressureReleased,
 	}
-	for k, v := range m.OpenValves {
-		next.OpenValves[k] = v
+	for valve, _ := range m.RemainingValves {
+		if valve == nextValve {
+			continue
+		}
+		next.RemainingValves[valve] = true
 	}
-	next.OpenValves[nextValve.Label] = true
-	if next.Minute < 30 {
-		next.PressureReleased += nextValve.FlowRate * (30 - next.Minute)
+	if next.TimeRemaining >= 0 {
+		next.PressureReleased += nextValve.FlowRate * next.TimeRemaining
 	}
 	return next
 }
 
-func (m *Move) NextMoves(valves map[string]*Valve) []*Move {
+func (m *Move) NextMoves() []*Move {
 	var moves []*Move
-	for _, v := range valves {
-		if v.FlowRate <= 0 || m.OpenValves[v.Label] {
-			continue
-		}
+	for v, _ := range m.RemainingValves {
 		m := m.CreateNext(v)
-		if m.Minute <= 30 {
+		if m.TimeRemaining > 0 {
 			moves = append(moves, m)
 		}
 	}
@@ -102,16 +115,7 @@ func (m *Move) NextMoves(valves map[string]*Valve) []*Move {
 }
 
 func MostPressureRelease(valves map[string]*Valve) int {
-	aa, found := valves["AA"]
-	if !found {
-		log.Fatal("Failed to find valve AA")
-	}
-	candidateMoves := []*Move{
-		&Move{
-			Current:    aa,
-			OpenValves: make(map[string]bool),
-		},
-	}
+	candidateMoves := []*Move{CreateInitialMove(valves)}
 	var nextMoves []*Move
 	bestResult := 0
 	for len(candidateMoves) > 0 {
@@ -120,7 +124,7 @@ func MostPressureRelease(valves map[string]*Valve) int {
 				fmt.Println("New best move", move)
 				bestResult = move.PressureReleased
 			}
-			nextMoves = append(nextMoves, move.NextMoves(valves)...)
+			nextMoves = append(nextMoves, move.NextMoves()...)
 		}
 		candidateMoves = nextMoves
 		nextMoves = nil

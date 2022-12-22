@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/alext/aoc/helpers"
@@ -39,8 +40,8 @@ func (v *Valve) DistanceTo(other *Valve) int {
 
 	for i := 0; len(currentList) > 0; i++ {
 		for candidate := range currentList {
+			v.distances[other.Label] = i
 			if candidate == other {
-				v.distances[other.Label] = i
 				return i
 			}
 			visited[candidate] = true
@@ -61,35 +62,82 @@ func (v *Valve) DistanceTo(other *Valve) int {
 type Move struct {
 	TimeRemaining    int
 	Current          *Valve
+	ETimeRemaining   int
+	ECurrent         *Valve
 	RemainingValves  map[*Valve]bool
 	PressureReleased int
+	Path             string
 }
 
 func (m *Move) String() string {
-	return fmt.Sprintf("%s total:%d", m.Current.Label, m.PressureReleased)
+	if m.ECurrent != nil {
+		return fmt.Sprintf("%s E:%s total:%d, path:%s", m.Current.Label, m.ECurrent.Label, m.PressureReleased, m.Path)
+	} else {
+		return fmt.Sprintf("%s total:%d, path:%s", m.Current.Label, m.PressureReleased, m.Path)
+	}
 }
 
-func CreateInitialMove(valves map[string]*Valve) *Move {
+func CreateInitialMove(valves map[string]*Valve, withElephant bool) *Move {
 	m := &Move{
 		TimeRemaining:   30,
 		Current:         valves["AA"],
 		RemainingValves: make(map[*Valve]bool),
+		Path:            "AA",
 	}
 	for _, valve := range valves {
 		if valve.FlowRate > 0 {
 			m.RemainingValves[valve] = true
 		}
 	}
+	if withElephant {
+		m.ECurrent = m.Current
+		m.TimeRemaining = 26
+		m.ETimeRemaining = 26
+	}
 	return m
 }
 
-func (m *Move) CreateNext(nextValve *Valve) *Move {
-	distance := m.Current.DistanceTo(nextValve)
+func (m *Move) CannotBeat(currentBest int) bool {
+	rates := make([]int, 0, len(m.RemainingValves))
+	for v, _ := range m.RemainingValves {
+		rates = append(rates, v.FlowRate)
+	}
+	sort.Sort(sort.Reverse(sort.IntSlice(rates)))
+	potentialBest := m.PressureReleased
+	timeRemaining := m.TimeRemaining
+	for _, rate := range rates {
+		timeRemaining -= 2
+		if timeRemaining <= 0 {
+			break
+		}
+		potentialBest += rate * timeRemaining
+	}
+	return currentBest >= potentialBest
+}
+
+func (m *Move) CreateNext(nextValve *Valve, elephantMove bool) *Move {
 	next := &Move{
-		TimeRemaining:    m.TimeRemaining - distance - 1, // distance minutes +1 more to open valve
-		Current:          nextValve,
-		RemainingValves:  make(map[*Valve]bool, len(m.RemainingValves)-1),
+		Current:          m.Current,
+		TimeRemaining:    m.TimeRemaining,
+		ECurrent:         m.ECurrent,
+		ETimeRemaining:   m.ETimeRemaining,
 		PressureReleased: m.PressureReleased,
+		RemainingValves:  make(map[*Valve]bool, len(m.RemainingValves)-1),
+	}
+	if elephantMove {
+		next.ETimeRemaining = m.ETimeRemaining - m.ECurrent.DistanceTo(nextValve) - 1 // distance minutes +1 more to open valve
+		next.ECurrent = nextValve
+		next.Path = m.Path + " E:" + nextValve.Label
+		if next.ETimeRemaining >= 0 {
+			next.PressureReleased += nextValve.FlowRate * next.ETimeRemaining
+		}
+	} else {
+		next.TimeRemaining = m.TimeRemaining - m.Current.DistanceTo(nextValve) - 1 // distance minutes +1 more to open valve
+		next.Current = nextValve
+		next.Path = m.Path + " " + nextValve.Label
+		if next.TimeRemaining >= 0 {
+			next.PressureReleased += nextValve.FlowRate * next.TimeRemaining
+		}
 	}
 	for valve, _ := range m.RemainingValves {
 		if valve == nextValve {
@@ -97,34 +145,41 @@ func (m *Move) CreateNext(nextValve *Valve) *Move {
 		}
 		next.RemainingValves[valve] = true
 	}
-	if next.TimeRemaining >= 0 {
-		next.PressureReleased += nextValve.FlowRate * next.TimeRemaining
-	}
 	return next
 }
 
 func (m *Move) NextMoves() []*Move {
 	var moves []*Move
 	for v, _ := range m.RemainingValves {
-		m := m.CreateNext(v)
 		if m.TimeRemaining > 0 {
-			moves = append(moves, m)
+			moves = append(moves, m.CreateNext(v, false))
+		}
+		if m.ECurrent != nil && m.ETimeRemaining > 0 {
+			moves = append(moves, m.CreateNext(v, true))
 		}
 	}
 	return moves
 }
 
-func MostPressureRelease(valves map[string]*Valve) int {
-	candidateMoves := []*Move{CreateInitialMove(valves)}
+func MostPressureRelease(valves map[string]*Valve, withElephant bool) int {
+	candidateMoves := []*Move{CreateInitialMove(valves, withElephant)}
 	var nextMoves []*Move
 	bestResult := 0
 	for len(candidateMoves) > 0 {
 		for _, move := range candidateMoves {
+			//fmt.Println("Considering move", move)
+			//fmt.Println(move.RemainingValves)
 			if move.PressureReleased > bestResult {
 				fmt.Println("New best move", move)
 				bestResult = move.PressureReleased
 			}
-			nextMoves = append(nextMoves, move.NextMoves()...)
+			for _, next := range move.NextMoves() {
+				if next.CannotBeat(bestResult) {
+					//fmt.Printf("Culling move %s, cannot beat %d\n", next, bestResult)
+					continue
+				}
+				nextMoves = append(nextMoves, next)
+			}
 		}
 		candidateMoves = nextMoves
 		nextMoves = nil
@@ -163,7 +218,9 @@ func parseInput(in io.Reader) map[string]*Valve {
 
 func main() {
 	valves := parseInput(os.Stdin)
-	fmt.Println(valves)
+	//fmt.Println(valves)
 
-	fmt.Println("Most pressure release possible:", MostPressureRelease(valves))
+	fmt.Println("Most pressure release possible:", MostPressureRelease(valves, false))
+
+	fmt.Println("Most pressure release with elephant:", MostPressureRelease(valves, true))
 }

@@ -16,38 +16,30 @@ const (
 	blueMax  = 14
 )
 
-func drawPossible(draw string) bool {
-	cubes := strings.Split(draw, `, `)
-	for _, cubeDraw := range cubes {
-		n, cube, ok := strings.Cut(cubeDraw, ` `)
-		if !ok {
-			log.Fatalf("Invalid cubes %s in draw %s", cubeDraw, draw)
-		}
-		count := helpers.MustAtoi(n)
-		switch cube {
-		case "red":
-			if count > redMax {
-				return false
+func minCubes(draws []string) map[string]int {
+	counts := make(map[string]int, 3)
+	for _, draw := range draws {
+		sets := strings.Split(draw, `, `)
+		for _, set := range sets {
+			n, cube, ok := strings.Cut(set, ` `)
+			if !ok {
+				log.Fatalf("Invalid set %s in draw %s", set, draw)
 			}
-		case "green":
-			if count > greenMax {
-				return false
+			count := helpers.MustAtoi(n)
+			if count > counts[cube] {
+				counts[cube] = count
 			}
-		case "blue":
-			if count > blueMax {
-				return false
-			}
-		default:
-			log.Fatalf("Unexpected colour %s in draw %s", cube, draw)
 		}
 	}
-	return true
+
+	return counts
 }
 
 func main() {
 	lineRe := regexp.MustCompile(`^Game (\d+):\s+(.*)$`)
 
 	total := 0
+	powerTotal := 0
 	helpers.ScanLines(os.Stdin, func(line string) {
 		matches := lineRe.FindStringSubmatch(line)
 		if matches == nil {
@@ -56,13 +48,16 @@ func main() {
 		gameNum := helpers.MustAtoi(matches[1])
 		draws := strings.Split(matches[2], `; `)
 
-		for _, draw := range draws {
-			if !drawPossible(draw) {
-				fmt.Printf("Game %d: draw %s not possible\n", gameNum, draw)
-				return
-			}
+		counts := minCubes(draws)
+		if counts["red"] <= redMax && counts["green"] <= greenMax && counts["blue"] <= blueMax {
+			fmt.Printf("Game %d possible\n", gameNum)
+			total += gameNum
 		}
-		total += gameNum
+
+		gamePower := counts["red"] * counts["green"] * counts["blue"]
+		fmt.Printf("Game %d: power %d\n", gameNum, gamePower)
+		powerTotal += gamePower
 	})
 	fmt.Println("Total:", total)
+	fmt.Println("Power Total:", powerTotal)
 }

@@ -9,9 +9,10 @@ import (
 )
 
 type Item struct {
-	Number int
-	Symbol string
-	X, Y   int
+	Number          int
+	Symbol          string
+	X, Y            int
+	AdjacentNumbers map[*Item]bool
 }
 
 func (i Item) String() string {
@@ -58,19 +59,30 @@ func main() {
 	})
 
 	symbolNumbers := make(map[*Item]bool)
+	totalRatios := 0
 	for _, sym := range s.Symbols {
+		sym.AdjacentNumbers = make(map[*Item]bool)
 		for y := helpers.Max(sym.Y-1, 0); y <= helpers.Min(sym.Y+1, len(s.Positions)-1); y++ {
 			for x := helpers.Max(sym.X-1, 0); x <= helpers.Min(sym.X+1, len(s.Positions[y])-1); x++ {
 				item := s.Positions[y][x]
 				if item != nil && item.Number > 0 {
 					symbolNumbers[item] = true
+					sym.AdjacentNumbers[item] = true
 				}
 			}
+		}
+		if sym.Symbol == "*" && len(sym.AdjacentNumbers) == 2 {
+			ratio := 1
+			for num := range sym.AdjacentNumbers {
+				ratio *= num.Number
+			}
+			totalRatios += ratio
 		}
 	}
 	total := 0
 	for item := range symbolNumbers {
 		total += item.Number
 	}
-	fmt.Println(total)
+	fmt.Println("Total:", total)
+	fmt.Println("TotalRatios:", totalRatios)
 }

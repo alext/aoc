@@ -11,6 +11,7 @@ import (
 
 type Card struct {
 	Number  int
+	Count   int
 	Winners map[int]bool
 	Numbers []int
 }
@@ -18,6 +19,7 @@ type Card struct {
 func ParseCard(input string) *Card {
 	// Card 6: 31 18 13 56 72 | 74 77 10 23 35 67 36 11
 	card := &Card{
+		Count:   1,
 		Winners: make(map[int]bool),
 	}
 
@@ -52,14 +54,38 @@ func (c *Card) Score() int {
 	return score
 }
 
+func (c *Card) NumMatches() int {
+	count := 0
+	for _, num := range c.Numbers {
+		if c.Winners[num] {
+			count++
+		}
+	}
+	return count
+}
+
 func main() {
 
+	cards := make([]*Card, 0)
 	total := 0
 	helpers.ScanLines(os.Stdin, func(line string) {
 		card := ParseCard(line)
+		cards = append(cards, card)
 		score := card.Score()
 		fmt.Printf("Card %d: score %d\n", card.Number, score)
 		total += score
 	})
 	fmt.Println("Total:", total)
+
+	for i, card := range cards {
+		for n := card.NumMatches(); n > 0; n-- {
+			cards[i+n].Count += card.Count
+		}
+	}
+	totalCount := 0
+	for _, card := range cards {
+		fmt.Printf("Card %d: count %d\n", card.Number, card.Count)
+		totalCount += card.Count
+	}
+	fmt.Println("TotalCount:", totalCount)
 }

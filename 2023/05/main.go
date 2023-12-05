@@ -83,11 +83,23 @@ func main() {
 
 	lowestLocation := 0
 	for _, seed := range seeds {
-		fmt.Println("Looking up seed", seed)
 		location := mapsLookup(maps, seed)
 		if lowestLocation == 0 || location < lowestLocation {
 			lowestLocation = location
 		}
 	}
 	fmt.Println("Lowest location:", lowestLocation)
+
+	lowestLocation = 0
+	for i := 0; i < len(seeds)-1; i += 2 {
+		start, length := seeds[i], seeds[i+1]
+		fmt.Println("Considering seed range", start, length)
+		for seed := start; seed < start+length; seed++ {
+			location := mapsLookup(maps, seed)
+			if lowestLocation == 0 || location < lowestLocation {
+				lowestLocation = location
+			}
+		}
+	}
+	fmt.Println("Lowest location 2:", lowestLocation)
 }

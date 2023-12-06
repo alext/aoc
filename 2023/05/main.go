@@ -61,9 +61,7 @@ InputLoop:
 		inputs = inputs[1:]
 
 		for _, r := range m.Ranges {
-			if (input.Start >= r.src && input.Start < r.src+r.length) || // start inside range
-				(input.End >= r.src && input.End < r.src+r.length) || // end inside range
-				(input.Start < r.src && input.End >= r.src+r.length) { // input completely overlaps range
+			if input.End >= r.src && input.Start < r.src+r.length {
 				result := Range{
 					Start: r.dest + input.Start - r.src,
 					End:   r.dest + input.End - r.src,

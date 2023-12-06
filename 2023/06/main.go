@@ -68,4 +68,12 @@ func main() {
 		}
 	}
 	fmt.Println("Product:", product)
+
+	_, timesLine, _ = strings.Cut(timesLine, ":")
+	_, distancesLine, _ = strings.Cut(distancesLine, ":")
+	timesLine = strings.TrimSpace(strings.ReplaceAll(timesLine, " ", ""))
+	distancesLine = strings.TrimSpace(strings.ReplaceAll(distancesLine, " ", ""))
+
+	n := numberOfWays(helpers.MustAtoi(timesLine), helpers.MustAtoi(distancesLine))
+	fmt.Printf("Joined time: %s, Distance: %s, ways: %d\n", timesLine, distancesLine, n)
 }

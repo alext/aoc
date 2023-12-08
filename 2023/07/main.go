@@ -13,6 +13,7 @@ import (
 
 type Card int
 
+const Joker Card = 0
 const (
 	Jack Card = 11 + iota
 	Queen
@@ -25,7 +26,7 @@ func ParseCard(c rune) Card {
 	case 'T':
 		return Card(10)
 	case 'J':
-		return Jack
+		return Joker
 	case 'Q':
 		return Queen
 	case 'K':
@@ -41,7 +42,7 @@ func (c Card) String() string {
 	switch c {
 	case 10:
 		return "T"
-	case Jack:
+	case Jack, Joker:
 		return "J"
 	case Queen:
 		return "Q"
@@ -88,9 +89,20 @@ func ParseHand(line string) Hand {
 
 func (h Hand) calculateType() HandType {
 	counts := make(map[Card]int)
+	jokers := 0
+	var maxCard Card
+	maxCount := 0
 	for _, c := range h.Cards {
-		counts[c]++
+		if c == Joker {
+			jokers++
+		} else {
+			counts[c]++
+			if counts[c] > maxCount {
+				maxCard, maxCount = c, counts[c]
+			}
+		}
 	}
+	counts[maxCard] += jokers
 	countCounts := make(map[int]int)
 	for _, count := range counts {
 		countCounts[count]++

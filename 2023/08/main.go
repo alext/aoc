@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"slices"
 
 	"github.com/alext/aoc/helpers"
 )
@@ -18,8 +19,10 @@ func (n Node) String() string {
 	return fmt.Sprintf("%s (%s, %s)", n.Label, n.Left.Label, n.Right.Label)
 }
 
-func buildGraph(inCh <-chan string) map[string]*Node {
-	nodes := make(map[string]*Node)
+type Graph map[string]*Node
+
+func buildGraph(inCh <-chan string) Graph {
+	nodes := make(Graph)
 	getNode := func(label string) *Node {
 		node, found := nodes[label]
 		if !found {
@@ -42,11 +45,8 @@ func buildGraph(inCh <-chan string) map[string]*Node {
 	return nodes
 }
 
-func moveCount(graph map[string]*Node, instructions string) int {
-	current, ok := graph["AAA"]
-	if !ok {
-		return -1
-	}
+func (g Graph) countMoves(instructions string, startNode *Node, anyZ bool) (*Node, int) {
+	current := startNode
 	moveCount := 0
 	for {
 		for _, i := range instructions {
@@ -59,48 +59,79 @@ func moveCount(graph map[string]*Node, instructions string) int {
 				log.Fatalln("Unexpected instruction:", i)
 			}
 			moveCount++
+			if anyZ && current.Label[2] == 'Z' {
+				return current, moveCount
+			}
 			if current.Label == "ZZZ" {
-				return moveCount
+				return current, moveCount
 			}
 		}
 	}
 }
 
-func moveCountWithGhosts(graph map[string]*Node, instructions string) int {
-	var currentSet []*Node
-	for label, node := range graph {
-		if label[2] == 'A' {
-			currentSet = append(currentSet, node)
-		}
-	}
-	fmt.Println(currentSet)
-	if len(currentSet) == 0 {
+func (g Graph) moveCount(instructions string) int {
+	current, ok := g["AAA"]
+	if !ok {
 		return -1
 	}
+	_, count := g.countMoves(instructions, current, false)
+	return count
+}
 
-	moveCount := 0
-	for {
-		for _, inst := range instructions {
-			allZ := true
-			moveCount++
-			for i := range currentSet {
-				switch inst {
-				case 'L':
-					currentSet[i] = currentSet[i].Left
-				case 'R':
-					currentSet[i] = currentSet[i].Right
-				default:
-					log.Fatalln("Unexpected instruction:", inst)
-				}
-				if currentSet[i].Label[2] != 'Z' {
-					allZ = false
-				}
-			}
-			if allZ {
-				return moveCount
-			}
+func (g Graph) nextNCounts(instructions string, startNode *Node, n int) []int {
+	var counts = make([]int, n)
+	current := startNode
+	for i := 0; i < n; i++ {
+		current, counts[i] = g.countMoves(instructions, current, true)
+	}
+	return counts
+}
+
+func gcm(a, b int) int {
+	for b != 0 {
+		a, b = b, a%b
+	}
+	return a
+}
+
+func lcm(a, b int, rest ...int) int {
+	res := a * b / gcm(a, b)
+	for _, next := range rest {
+		res = lcm(res, next)
+	}
+	return res
+}
+
+func (g Graph) moveCountWithGhosts(instructions string) int {
+	var startingSet []*Node
+	for label, node := range g {
+		if label[2] == 'A' {
+			startingSet = append(startingSet, node)
 		}
 	}
+	fmt.Println(startingSet)
+	if len(startingSet) == 0 {
+		return -1
+	}
+	if len(startingSet) == 1 {
+		_, count := g.countMoves(instructions, startingSet[0], true)
+		return count
+	}
+	loopLengths := make([]int, 0, len(startingSet))
+	for _, node := range startingSet {
+		counts := g.nextNCounts(instructions, node, 10)
+		wkg := slices.Clone(counts)
+		slices.Sort(wkg)
+		wkg = slices.Compact(wkg)
+		if len(wkg) != 1 {
+			fmt.Printf("%s, has non-repeating counts: %v\n", node, counts)
+			return -1
+		}
+		loopLengths = append(loopLengths, wkg[0])
+	}
+	fmt.Println("Loop lengths:", loopLengths)
+
+	return lcm(loopLengths[0], loopLengths[1], loopLengths[2:]...)
 }
 
 func main() {
@@ -111,6 +142,6 @@ func main() {
 
 	graph := buildGraph(inCh)
 
-	fmt.Println("Total moves:", moveCount(graph, instructions))
-	fmt.Println("Total moves with ghosts:", moveCountWithGhosts(graph, instructions))
+	fmt.Println("Total moves:", graph.moveCount(instructions))
+	fmt.Println("Total moves with ghosts:", graph.moveCountWithGhosts(instructions))
 }

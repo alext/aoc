@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/alext/aoc/helpers"
@@ -19,45 +20,65 @@ func (g RawGalaxy) String() string {
 	return b.String()
 }
 
-func expandRow(row []string, emptyCols map[int]bool) []string {
-	var expanded []string
-	for col, ch := range row {
-		expanded = append(expanded, ch)
-		if emptyCols[col] {
-			expanded = append(expanded, ch)
-		}
+func (g RawGalaxy) EmptyRowsCols() ([]int, []int) {
+	if len(g) == 0 {
+		return nil, nil
 	}
-	return expanded
-}
-
-func expandGalaxy(input RawGalaxy) RawGalaxy {
-	if len(input) == 0 {
-		return [][]string{}
-	}
-	emptyCols := make(map[int]bool)
-colLoop:
-	for col := 0; col < len(input[0]); col++ {
-		for row := 0; row < len(input); row++ {
-			if input[row][col] == "#" {
-				continue colLoop
-			}
-		}
-		emptyCols[col] = true
-	}
-	var expanded RawGalaxy
+	var emptyRows []int
 rowLoop:
-	for row := 0; row < len(input); row++ {
-		expanddedRow := expandRow(input[row], emptyCols)
-		expanded = append(expanded, expanddedRow)
-		for _, ch := range input[row] {
+	for row := 0; row < len(g); row++ {
+		for _, ch := range g[row] {
 			if ch == "#" {
 				continue rowLoop
 			}
 		}
-		// No galaxies in row, so append again
-		expanded = append(expanded, expanddedRow)
+		emptyRows = append(emptyRows, row)
 	}
+	var emptyCols []int
+colLoop:
+	for col := 0; col < len(g[0]); col++ {
+		for row := 0; row < len(g); row++ {
+			if g[row][col] == "#" {
+				continue colLoop
+			}
+		}
+		emptyCols = append(emptyCols, col)
+	}
+	return emptyRows, emptyCols
+}
+
+type Galaxies []helpers.Pos
+
+func (g Galaxies) MakeExpanded(emptyRows, emptyCols []int, factor int) Galaxies {
+	expanded := slices.Clone(g)
+
+	for r := len(emptyRows) - 1; r >= 0; r-- {
+		for i := range expanded {
+			if expanded[i].Y > emptyRows[r] {
+				expanded[i].Y += factor - 1
+			}
+		}
+	}
+	for c := len(emptyCols) - 1; c >= 0; c-- {
+		for i := range expanded {
+			if expanded[i].X > emptyCols[c] {
+				expanded[i].X += factor - 1
+			}
+		}
+	}
+
 	return expanded
+}
+
+func (g Galaxies) TotalDistance() int {
+	totalDistance := 0
+	for i, a := range g {
+		for j := i + 1; j < len(g); j++ {
+			b := g[j]
+			totalDistance += a.DistanceTo(b)
+		}
+	}
+	return totalDistance
 }
 
 func main() {
@@ -66,10 +87,8 @@ func main() {
 		rawGalaxy = append(rawGalaxy, strings.Split(line, ""))
 	})
 	fmt.Println(rawGalaxy)
-	rawGalaxy = expandGalaxy(rawGalaxy)
-	fmt.Println(rawGalaxy)
 
-	var galaxies []helpers.Pos
+	var galaxies Galaxies
 	for row := range rawGalaxy {
 		for col, ch := range rawGalaxy[row] {
 			if ch == "#" {
@@ -77,13 +96,15 @@ func main() {
 			}
 		}
 	}
+
+	emptyRows, emptyCols := rawGalaxy.EmptyRowsCols()
+	expanded := galaxies.MakeExpanded(emptyRows, emptyCols, 2)
+
 	fmt.Println(galaxies)
-	totalDistance := 0
-	for i, a := range galaxies {
-		for j := i + 1; j < len(galaxies); j++ {
-			b := galaxies[j]
-			totalDistance += a.DistanceTo(b)
-		}
-	}
-	fmt.Println("Total distance:", totalDistance)
+	fmt.Println(expanded)
+
+	fmt.Println("Total distance:", expanded.TotalDistance())
+
+	expanded = galaxies.MakeExpanded(emptyRows, emptyCols, 1_000_000)
+	fmt.Println("Total distance 2:", expanded.TotalDistance())
 }

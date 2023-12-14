@@ -54,7 +54,10 @@ func CountSolutions(springs string, groups []int, prefix string) int {
 }
 
 func main() {
-	solutions := 0
+
+	var springParts []string
+	var groupParts [][]int
+
 	helpers.ScanLines(os.Stdin, func(line string) {
 		springs, groupsPart, _ := strings.Cut(line, " ")
 
@@ -62,9 +65,26 @@ func main() {
 		for _, n := range strings.Split(groupsPart, ",") {
 			groups = append(groups, helpers.MustAtoi(n))
 		}
-
-		solutions += CountSolutions(springs, groups, "")
+		springParts = append(springParts, springs)
+		groupParts = append(groupParts, groups)
 	})
 
+	solutions := 0
+	for i, springs := range springParts {
+		solutions += CountSolutions(springs, groupParts[i], "")
+	}
 	fmt.Println("Solutions:", solutions)
+
+	// Part 2
+	solutions = 0
+	for i := range springParts {
+		springs := springParts[i]
+		groups := groupParts[i]
+		for n := 1; n < 5; n++ {
+			springs += "?" + springParts[i]
+			groups = append(groups, groupParts[i]...)
+		}
+		solutions += CountSolutions(springs, groups, "")
+	}
+	fmt.Println("Expanded solutions:", solutions)
 }

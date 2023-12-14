@@ -9,7 +9,26 @@ import (
 	"github.com/alext/aoc/helpers"
 )
 
+var cache = make(map[string]int)
+
+func makeKey(springs string, groups []int) string {
+	return fmt.Sprintf("%s%v", springs, groups)
+}
+
+func cacheStore(springs string, groups []int, result int) {
+	cache[makeKey(springs, groups)] = result
+}
+
+func cacheLookup(springs string, groups []int) (int, bool) {
+	result, ok := cache[makeKey(springs, groups)]
+	return result, ok
+}
+
 func CountSolutions(springs string, groups []int, prefix string) int {
+	if result, found := cacheLookup(springs, groups); found {
+		return result
+	}
+
 	//fmt.Printf("%sCountSolutions springs:%s groups:%v\n", prefix, springs, groups)
 	if len(springs) == 0 {
 		if len(groups) == 0 {
@@ -22,7 +41,9 @@ func CountSolutions(springs string, groups []int, prefix string) int {
 	prefix = prefix + "  "
 	switch springs[0] {
 	case '.':
-		return CountSolutions(springs[1:], groups, prefix)
+		result := CountSolutions(springs[1:], groups, prefix)
+		cacheStore(springs, groups, result)
+		return result
 	case '#':
 		if len(groups) == 0 || len(springs) < groups[0] {
 			return 0
@@ -36,17 +57,23 @@ func CountSolutions(springs string, groups []int, prefix string) int {
 
 		if len(springs) == groups[0] {
 			// No more string recurse with the rest (empty) string...
-			return CountSolutions(springs[groups[0]:], groups[1:], prefix)
+			result := CountSolutions(springs[groups[0]:], groups[1:], prefix)
+			cacheStore(springs, groups, result)
+			return result
 		}
 		if springs[groups[0]] == '#' {
 			// # follows this, so not a match
 			return 0
 		}
 		// . or ? follows, so treat as . and continue beyond with rest of groups
-		return CountSolutions(springs[groups[0]+1:], groups[1:], prefix)
+		result := CountSolutions(springs[groups[0]+1:], groups[1:], prefix)
+		cacheStore(springs, groups, result)
+		return result
 	case '?':
 		// Replace with both . and #
-		return CountSolutions("."+springs[1:], groups, prefix) + CountSolutions("#"+springs[1:], groups, prefix)
+		result := CountSolutions("."+springs[1:], groups, prefix) + CountSolutions("#"+springs[1:], groups, prefix)
+		cacheStore(springs, groups, result)
+		return result
 	default:
 		log.Fatalln("Unexpected character", springs[0])
 		return 0

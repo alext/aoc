@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -21,38 +22,54 @@ func (s Shape) String() string {
 	return b.String()
 }
 
-func (s Shape) isReflectionCol(col int) bool {
+func (s Shape) isReflectionCol(col int) (bool, bool) {
 	if col >= len(s[0])-1 {
-		return false
+		return false, false
 	}
+	smudgeFound := false
 	leftCol, rightCol := col, col+1
 	for leftCol >= 0 && rightCol < len(s[0]) {
 		for row := 0; row < len(s); row++ {
 			if s[row][leftCol] != s[row][rightCol] {
-				return false
+				if smudgeFound {
+					return false, false
+				} else {
+					smudgeFound = true
+				}
 			}
 		}
 		leftCol--
 		rightCol++
 	}
-	return true
+	if smudgeFound {
+		return false, true
+	}
+	return true, false
 }
 
-func (s Shape) isReflectionRow(row int) bool {
+func (s Shape) isReflectionRow(row int) (bool, bool) {
 	if row >= len(s)-1 {
-		return false
+		return false, false
 	}
+	smudgeFound := false
 	topRow, bottomRow := row, row+1
 	for topRow >= 0 && bottomRow < len(s) {
 		for col := 0; col < len(s[topRow]); col++ {
 			if s[topRow][col] != s[bottomRow][col] {
-				return false
+				if smudgeFound {
+					return false, false
+				} else {
+					smudgeFound = true
+				}
 			}
 		}
 		topRow--
 		bottomRow++
 	}
-	return true
+	if smudgeFound {
+		return false, true
+	}
+	return true, false
 }
 
 func (s Shape) SummariseReflections() int {
@@ -61,17 +78,43 @@ func (s Shape) SummariseReflections() int {
 	}
 	summary := 0
 	for col := 0; col < len(s[0]); col++ {
-		if s.isReflectionCol(col) {
-			fmt.Println("Found col reflection:", col)
+		if is, _ := s.isReflectionCol(col); is {
+			//fmt.Println("Found reflection col:", col)
 			summary += col + 1
 		}
 	}
 	for row := 0; row < len(s); row++ {
-		if s.isReflectionRow(row) {
+		if is, _ := s.isReflectionRow(row); is {
+			//fmt.Println("Found reflection row:", row)
 			summary += (row + 1) * 100
 		}
 	}
 	return summary
+}
+
+func (s Shape) SummariseSmudgeReflections() int {
+	for col := 0; col < len(s[0]); col++ {
+		found, smudgeFound := s.isReflectionCol(col)
+		if found {
+			continue
+		}
+		if smudgeFound {
+			//fmt.Printf("Found smudge from col %d at %d, %d\n", col, smudge.X, smudge.Y)
+			return col + 1
+		}
+	}
+	for row := 0; row < len(s); row++ {
+		found, smudgeFound := s.isReflectionRow(row)
+		if found {
+			continue
+		}
+		if smudgeFound {
+			//fmt.Printf("Found smudge from row %d at %d, %d\n", row, smudge.X, smudge.Y)
+			return (row + 1) * 100
+		}
+	}
+	log.Fatalln("Failed to find smudge in\n", s)
+	return -1
 }
 
 func main() {
@@ -92,10 +135,19 @@ func main() {
 
 	totalSummary := 0
 	for _, shape := range shapes {
-		fmt.Println(shape)
+		//fmt.Println(shape)
 		sum := shape.SummariseReflections()
-		fmt.Println("Summary:", sum)
+		//fmt.Println("Summary:", sum)
 		totalSummary += sum
 	}
 	fmt.Println("Total summary:", totalSummary)
+
+	totalSummary = 0
+	for _, shape := range shapes {
+		//fmt.Println(shape)
+		sum := shape.SummariseSmudgeReflections()
+		//fmt.Println("Summary:", sum)
+		totalSummary += sum
+	}
+	fmt.Println("Total smudge line summary:", totalSummary)
 }

@@ -53,3 +53,14 @@ func SplitCSV(input string) []string {
 	}
 	return parts
 }
+
+func ScanGrid(input <-chan string, separator string) [][]string {
+	var result [][]string
+	for line := range input {
+		if line == "" {
+			break
+		}
+		result = append(result, strings.Split(line, separator))
+	}
+	return result
+}

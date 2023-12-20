@@ -32,6 +32,12 @@ type Square struct {
 
 func (s Square) IsEnergised() bool { return len(s.EntryPoints) > 0 }
 
+func (s *Square) Reset() {
+	if len(s.EntryPoints) > 0 {
+		s.EntryPoints = s.EntryPoints[:0]
+	}
+}
+
 func (s Square) String() string {
 	if s.Symbol == `.` {
 		if len(s.EntryPoints) >= 2 {
@@ -107,6 +113,7 @@ func BuildContraption(input [][]string) Contraption {
 	}
 	return c
 }
+
 func (c Contraption) String() string {
 	var b = strings.Builder{}
 	for i, line := range c {
@@ -118,6 +125,14 @@ func (c Contraption) String() string {
 		}
 	}
 	return b.String()
+}
+
+func (c Contraption) Reset() {
+	for _, row := range c {
+		for _, sq := range row {
+			sq.Reset()
+		}
+	}
 }
 
 func (c Contraption) AdjacentSquare(s *Square, dir Direction) *Square {
@@ -142,16 +157,14 @@ func (c Contraption) AdjacentSquare(s *Square, dir Direction) *Square {
 	return line[col]
 }
 
-func (c Contraption) ProcessBeam() {
-	start := c[0][0]
-	start.EntryPoints = []Direction{West}
-
+func (c Contraption) processBeam(start *Square, startDir Direction) {
 	type Task struct {
 		Square     *Square
 		EntryPoint Direction
 	}
 
-	var current = []*Task{{Square: start, EntryPoint: West}}
+	start.EntryPoints = []Direction{startDir}
+	var current = []*Task{{Square: start, EntryPoint: startDir}}
 	var next []*Task
 	for len(current) > 0 {
 		for _, task := range current {
@@ -174,6 +187,41 @@ func (c Contraption) ProcessBeam() {
 	}
 }
 
+func (c Contraption) ProcessBeam() {
+	c.processBeam(c[0][0], West)
+}
+
+func (c Contraption) FindBestBeam() (*Square, Direction, int) {
+	var bestSq *Square
+	var bestEntry Direction
+	var bestCount int
+
+	check := func(row, col int, dir Direction) {
+		c.Reset()
+		sq := c[row][col]
+		c.processBeam(sq, dir)
+		count := c.EnergisedSquares()
+		//fmt.Printf("(%d,%d) from %d, count: %d\n", col, 0, dir, count)
+		//fmt.Println(c)
+		if count > bestCount {
+			bestCount = count
+			bestSq = sq
+			bestEntry = dir
+		}
+	}
+
+	for col := 0; col < len(c[0]); col++ {
+		check(0, col, North)
+		check(len(c)-1, col, South)
+	}
+	for row := 0; row < len(c); row++ {
+		check(row, 0, West)
+		check(row, len(c[0])-1, East)
+	}
+
+	return bestSq, bestEntry, bestCount
+}
+
 func (c Contraption) EnergisedSquares() int {
 	count := 0
 	for _, row := range c {
@@ -188,11 +236,14 @@ func (c Contraption) EnergisedSquares() int {
 
 func main() {
 	c := BuildContraption(helpers.ScanGrid(os.Stdin, ""))
-
 	fmt.Println(c)
 
 	c.ProcessBeam()
 	fmt.Println("With beam:")
-	fmt.Println(c)
+	//fmt.Println(c)
 	fmt.Println("Energised squares:", c.EnergisedSquares())
+
+	c.Reset()
+	square, direction, best := c.FindBestBeam()
+	fmt.Printf("Most energised squares %d from (%d,%d) %v\n", best, square.Col, square.Row, direction)
 }

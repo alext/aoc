@@ -121,7 +121,7 @@ func checkArrangementSeen(g Grid, thisIteration int) (bool, int) {
 }
 
 func main() {
-	grid := Grid(helpers.ScanGrid(helpers.StreamLines(os.Stdin), ""))
+	grid := Grid(helpers.ScanGrid(os.Stdin, ""))
 
 	fmt.Println("Before:")
 	fmt.Println(grid)

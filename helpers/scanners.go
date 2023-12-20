@@ -54,9 +54,9 @@ func SplitCSV(input string) []string {
 	return parts
 }
 
-func ScanGrid(input <-chan string, separator string) [][]string {
+func ScanGrid(in io.Reader, separator string) [][]string {
 	var result [][]string
-	for line := range input {
+	for line := range StreamLines(in) {
 		if line == "" {
 			break
 		}

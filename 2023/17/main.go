@@ -166,6 +166,7 @@ func (g Grid) BestPath() *Move {
 	}
 	endBlock := g[len(g)-1][len(g[0])-1]
 	moves := []*Move{start}
+	var best *Move
 
 	movesToBlock := make(map[*Block][]*Move)
 
@@ -175,12 +176,13 @@ func (g Grid) BestPath() *Move {
 		moves = moves[1:]
 
 		if move.Target == endBlock {
-			return move
-			//if best == nil || move.TotalHeatLoss < best.TotalHeatLoss {
-			//    fmt.Printf("Found new best loss=%d, path: %s\n", move.TotalHeatLoss, move.PathStr())
-			//    best = move
-			//    continue
-			//}
+			//return move
+			if best == nil || move.TotalHeatLoss < best.TotalHeatLoss {
+				//fmt.Printf("Found new best move:%s, path: %s\n", move, move.PathStr())
+				fmt.Printf("Found new best move:%s, len(moves):%d\n", move, len(moves))
+				best = move
+				continue
+			}
 		}
 
 		if move.Beaten {
@@ -188,9 +190,9 @@ func (g Grid) BestPath() *Move {
 		}
 
 		// best could have improved since this was added to the list
-		//if best != nil && (move.TotalHeatLoss+move.DistanceToEnd) >= best.TotalHeatLoss {
-		//    continue
-		//}
+		if best != nil && (move.TotalHeatLoss+move.DistanceToEnd) >= best.TotalHeatLoss {
+			continue
+		}
 
 		for _, nextMove := range move.NextMoves(g) {
 			target := nextMove.Target
@@ -199,11 +201,11 @@ func (g Grid) BestPath() *Move {
 				continue
 			}
 			nextMove.TotalHeatLoss = move.TotalHeatLoss + target.HeatLoss
-			//nextMove.DistanceToEnd = nextMove.Target.Pos.DistanceTo(endBlock.Pos)
+			nextMove.DistanceToEnd = nextMove.Target.Pos.DistanceTo(endBlock.Pos)
 
-			//if best != nil && (nextMove.TotalHeatLoss+move.DistanceToEnd) >= best.TotalHeatLoss {
-			//    continue
-			//}
+			if best != nil && (nextMove.TotalHeatLoss+move.DistanceToEnd) >= best.TotalHeatLoss {
+				continue
+			}
 
 			if nextMove.EntryDirection == move.EntryDirection {
 				nextMove.ConsecutiveCount = move.ConsecutiveCount + 1
@@ -217,7 +219,6 @@ func (g Grid) BestPath() *Move {
 				}
 				if nextMove.BetterThan(otherMove) {
 					otherMove.Beaten = true
-					// TODO: remove from movesToBlock
 				}
 			}
 			movesToBlock[target] = slices.DeleteFunc(movesToBlock[target], func(m *Move) bool { return m.Beaten })
@@ -229,15 +230,13 @@ func (g Grid) BestPath() *Move {
 			movesToBlock[target] = append(movesToBlock[target], nextMove)
 		}
 
-		slices.SortFunc(moves, func(a, b *Move) int { return cmp.Compare(a.TotalHeatLoss, b.TotalHeatLoss) })
+		//slices.SortFunc(moves, func(a, b *Move) int { return cmp.Compare(a.TotalHeatLoss, b.TotalHeatLoss) })
+		slices.SortFunc(moves, func(a, b *Move) int { return cmp.Compare(a.DistanceToEnd, b.DistanceToEnd) })
 		//fmt.Println("After move:", moves)
 		//limit--
 	}
 
-	//if best != nil {
-	//    return best.TotalHeatLoss
-	//}
-	return nil
+	return best
 }
 
 func main() {
@@ -246,6 +245,10 @@ func main() {
 	//fmt.Println(g)
 
 	move := g.BestPath()
+	if move == nil {
+		fmt.Println("Failed to find a best path")
+		return
+	}
 	fmt.Println("Best path:", move, move.PathStr())
 	fmt.Println("Heat loss on best path:", move.TotalHeatLoss)
 }

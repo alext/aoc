@@ -56,13 +56,13 @@ type Move struct {
 	TotalHeatLoss int
 }
 
-func (m *Move) NextMoves(g Grid) []*Move {
+func (m *Move) NextMoves(g Grid, minStep, maxStep int) []*Move {
 	maxPos := g.MaxPos()
 	var nextMoves []*Move
 
 	// positive direction
 	totalHeat := m.TotalHeatLoss
-	for i := 1; i <= 3; i++ {
+	for i := 1; i <= maxStep; i++ {
 		nextPos := m.Step.Pos
 		if m.Step.Vertical {
 			nextPos.X += i
@@ -77,14 +77,16 @@ func (m *Move) NextMoves(g Grid) []*Move {
 		}
 		totalHeat += g.Get(nextPos)
 
-		nextMoves = append(nextMoves, &Move{
-			Step:          Step{Pos: nextPos, Vertical: !m.Step.Vertical},
-			TotalHeatLoss: totalHeat,
-		})
+		if i >= minStep {
+			nextMoves = append(nextMoves, &Move{
+				Step:          Step{Pos: nextPos, Vertical: !m.Step.Vertical},
+				TotalHeatLoss: totalHeat,
+			})
+		}
 	}
 	// Negative direction
 	totalHeat = m.TotalHeatLoss
-	for i := 1; i <= 3; i++ {
+	for i := 1; i <= maxStep; i++ {
 		nextPos := m.Step.Pos
 		if m.Step.Vertical {
 			nextPos.X -= i
@@ -99,16 +101,18 @@ func (m *Move) NextMoves(g Grid) []*Move {
 		}
 		totalHeat += g.Get(nextPos)
 
-		nextMoves = append(nextMoves, &Move{
-			Step:          Step{Pos: nextPos, Vertical: !m.Step.Vertical},
-			TotalHeatLoss: totalHeat,
-		})
+		if i >= minStep {
+			nextMoves = append(nextMoves, &Move{
+				Step:          Step{Pos: nextPos, Vertical: !m.Step.Vertical},
+				TotalHeatLoss: totalHeat,
+			})
+		}
 	}
 
 	return nextMoves
 }
 
-func BestHeatLoss(g Grid) int {
+func BestHeatLoss(g Grid, minStep, maxStep int) int {
 	endPos := g.MaxPos()
 
 	seen := make(map[Step]bool)
@@ -129,7 +133,7 @@ func BestHeatLoss(g Grid) int {
 		}
 		seen[move.Step] = true
 
-		for _, nextMove := range move.NextMoves(g) {
+		for _, nextMove := range move.NextMoves(g, minStep, maxStep) {
 			if seen[nextMove.Step] {
 				continue
 			}
@@ -146,5 +150,6 @@ func main() {
 
 	//fmt.Println(grid)
 
-	fmt.Println("Best heat loss:", BestHeatLoss(grid))
+	fmt.Println("Best heat loss:", BestHeatLoss(grid, 1, 3))
+	fmt.Println("Best heat loss with ultra:", BestHeatLoss(grid, 4, 10))
 }

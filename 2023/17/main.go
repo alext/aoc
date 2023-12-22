@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/alext/aoc/helpers"
 )
@@ -100,52 +101,58 @@ func (m *Move) PathStr() string {
 	return b.String()
 }
 
+func (m *Move) Reset() {
+	m.Path = m.Path[:0]
+	m.Target = nil
+	m.DistanceToEnd = 0
+	m.TotalHeatLoss = 0
+	m.ConsecutiveCount = 0
+	m.Beaten = false
+}
+
+var movePool = sync.Pool{
+	New: func() any { return &Move{} },
+}
+
+func buildMove(target *Block, dir Direction, from *Move) *Move {
+	m := movePool.Get().(*Move)
+	m.Reset()
+	m.Target = target
+	m.EntryDirection = dir
+	m.Path = append(m.Path, from.Path...)
+	m.Path = append(m.Path, from.Target)
+	return m
+}
+
 func (m *Move) NextMoves(g Grid) []*Move {
 	var nextMoves []*Move
 	b := m.Target
-	nextPath := append(slices.Clone(m.Path), b)
 	// Going North
 	if b.Pos.Y > 0 && m.EntryDirection != South {
 		target := g[b.Pos.Y-1][b.Pos.X]
 		if !slices.Contains(m.Path, target) {
-			nextMoves = append(nextMoves, &Move{
-				Path:           nextPath,
-				Target:         target,
-				EntryDirection: North,
-			})
+			nextMoves = append(nextMoves, buildMove(target, North, m))
 		}
 	}
 	// Going East
 	if b.Pos.X < len(g[0])-1 && m.EntryDirection != West {
 		target := g[b.Pos.Y][b.Pos.X+1]
 		if !slices.Contains(m.Path, target) {
-			nextMoves = append(nextMoves, &Move{
-				Path:           nextPath,
-				Target:         target,
-				EntryDirection: East,
-			})
+			nextMoves = append(nextMoves, buildMove(target, East, m))
 		}
 	}
 	// Going South
 	if b.Pos.Y < len(g)-1 && m.EntryDirection != North {
 		target := g[b.Pos.Y+1][b.Pos.X]
 		if !slices.Contains(m.Path, target) {
-			nextMoves = append(nextMoves, &Move{
-				Path:           nextPath,
-				Target:         target,
-				EntryDirection: South,
-			})
+			nextMoves = append(nextMoves, buildMove(target, South, m))
 		}
 	}
 	// Going West
 	if b.Pos.X > 0 && m.EntryDirection != East {
 		target := g[b.Pos.Y][b.Pos.X-1]
 		if !slices.Contains(m.Path, target) {
-			nextMoves = append(nextMoves, &Move{
-				Path:           nextPath,
-				Target:         target,
-				EntryDirection: West,
-			})
+			nextMoves = append(nextMoves, buildMove(target, West, m))
 		}
 	}
 	return nextMoves
@@ -186,11 +193,16 @@ func (g Grid) BestPath() *Move {
 		}
 
 		if move.Beaten {
+			movePool.Put(move)
 			continue
 		}
 
 		// best could have improved since this was added to the list
 		if best != nil && (move.TotalHeatLoss+move.DistanceToEnd) >= best.TotalHeatLoss {
+			movesToBlock[move.Target] = slices.DeleteFunc(movesToBlock[move.Target], func(m *Move) bool {
+				return m == move
+			})
+			movePool.Put(move)
 			continue
 		}
 
@@ -198,12 +210,14 @@ func (g Grid) BestPath() *Move {
 			target := nextMove.Target
 			if move.EntryDirection == nextMove.EntryDirection && move.ConsecutiveCount >= 3 {
 				// Can't move more than 3 in a row
+				movePool.Put(nextMove)
 				continue
 			}
 			nextMove.TotalHeatLoss = move.TotalHeatLoss + target.HeatLoss
 			nextMove.DistanceToEnd = nextMove.Target.Pos.DistanceTo(endBlock.Pos)
 
 			if best != nil && (nextMove.TotalHeatLoss+move.DistanceToEnd) >= best.TotalHeatLoss {
+				movePool.Put(nextMove)
 				continue
 			}
 
@@ -223,6 +237,7 @@ func (g Grid) BestPath() *Move {
 			}
 			movesToBlock[target] = slices.DeleteFunc(movesToBlock[target], func(m *Move) bool { return m.Beaten })
 			if nextMove.Beaten {
+				movePool.Put(nextMove)
 				continue
 			}
 

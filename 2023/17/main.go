@@ -1,10 +1,9 @@
 package main
 
 import (
-	"cmp"
+	"container/heap"
 	"fmt"
 	"os"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -112,18 +111,33 @@ func (m *Move) NextMoves(g Grid, minStep, maxStep int) []*Move {
 	return nextMoves
 }
 
+type MoveQueue []*Move
+
+func (mq MoveQueue) Len() int           { return len(mq) }
+func (mq MoveQueue) Less(i, j int) bool { return mq[i].TotalHeatLoss < mq[j].TotalHeatLoss }
+func (mq MoveQueue) Swap(i, j int)      { mq[i], mq[j] = mq[j], mq[i] }
+
+func (mq *MoveQueue) Push(x any) { *mq = append(*mq, x.(*Move)) }
+func (mq *MoveQueue) Pop() any {
+	old := *mq
+	n := len(old)
+	item := old[n-1]
+	old[n-1] = nil // avoid memory leak
+	*mq = old[0 : n-1]
+	return item
+}
+
 func BestHeatLoss(g Grid, minStep, maxStep int) int {
 	endPos := g.MaxPos()
 
 	seen := make(map[Step]bool)
-	moves := []*Move{
+	moves := &MoveQueue{
 		{Step: Step{Vertical: true}}, // Zero Pos and heat
 		{Step: Step{Vertical: false}},
 	}
 
-	for len(moves) > 0 {
-		move := moves[0]
-		moves = moves[1:]
+	for moves.Len() > 0 {
+		move := heap.Pop(moves).(*Move)
 
 		if move.Step.Pos == endPos {
 			return move.TotalHeatLoss
@@ -137,10 +151,8 @@ func BestHeatLoss(g Grid, minStep, maxStep int) int {
 			if seen[nextMove.Step] {
 				continue
 			}
-			moves = append(moves, nextMove)
+			heap.Push(moves, nextMove)
 		}
-
-		slices.SortFunc(moves, func(a, b *Move) int { return cmp.Compare(a.TotalHeatLoss, b.TotalHeatLoss) })
 	}
 	return -1
 }

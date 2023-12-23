@@ -26,3 +26,10 @@ func (p Pos) String() string {
 func (p Pos) DistanceTo(other Pos) int {
 	return AbsInt(p.X-other.X) + AbsInt(p.Y-other.Y)
 }
+
+func (p Pos) Add(delta Pos) Pos {
+	return Pos{
+		X: p.X + delta.X,
+		Y: p.Y + delta.Y,
+	}
+}

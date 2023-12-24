@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"regexp"
-	"strings"
 
 	"github.com/alext/aoc/helpers"
 )
@@ -15,10 +13,10 @@ type Pos = helpers.Pos
 type Direction uint8
 
 const (
-	Up Direction = iota
+	Right Direction = iota
 	Down
 	Left
-	Right
+	Up
 )
 
 func ParseDirection(d string) Direction {
@@ -39,9 +37,9 @@ func ParseDirection(d string) Direction {
 func (d Direction) Delta() Pos {
 	switch d {
 	case Up:
-		return Pos{Y: -1}
-	case Down:
 		return Pos{Y: 1}
+	case Down:
+		return Pos{Y: -1}
 	case Left:
 		return Pos{X: -1}
 	case Right:
@@ -57,127 +55,94 @@ type Instruction struct {
 	Length int
 }
 
-var lineRe = regexp.MustCompile(`^([UDRL])\s+(\d+)\s+`)
+func ParseInstruction(input string) (Instruction, Instruction) {
+	i1 := Instruction{}
+	i2 := Instruction{}
+	var dirStr string
 
-func ParseInstruction(input string) Instruction {
-	matches := lineRe.FindStringSubmatch(input)
-	if matches == nil {
-		log.Fatalln("Failed to parse instruction", input)
+	// R 6 (#70c710)
+	_, err := fmt.Sscanf(input, "%s %d (#%5x%d)", &dirStr, &i1.Length, &i2.Length, &i2.Dir)
+	if err != nil {
+		log.Fatalln("Failed to parse input", input, "err:", err)
 	}
-	return Instruction{
-		Dir:    ParseDirection(matches[1]),
-		Length: helpers.MustAtoi(matches[2]),
+	i1.Dir = ParseDirection(dirStr)
+
+	return i1, i2
+}
+
+func (i Instruction) Delta() Pos {
+	switch i.Dir {
+	case Up:
+		return Pos{Y: i.Length}
+	case Down:
+		return Pos{Y: -i.Length}
+	case Left:
+		return Pos{X: -i.Length}
+	case Right:
+		return Pos{X: i.Length}
+	default:
+		log.Fatalln("Unexpected direction", i.Dir)
+		return Pos{}
 	}
 }
 
 type Lagoon struct {
-	Squares   map[Pos]bool
-	MinExtent Pos
-	MaxExtent Pos
-	Digger    Pos
-}
-
-func (l Lagoon) String() string {
-	var b strings.Builder
-	for y := l.MinExtent.Y; y <= l.MaxExtent.Y; y++ {
-		for x := l.MinExtent.X; x <= l.MaxExtent.X; x++ {
-			if x == 0 && y == 0 {
-				b.WriteString("0")
-			} else if l.Squares[Pos{X: x, Y: y}] {
-				b.WriteString("#")
-			} else {
-				b.WriteString(".")
-			}
-		}
-		if y < l.MaxExtent.Y {
-			b.WriteString("\n")
-		}
-	}
-	return b.String()
+	Corners []Pos
+	Digger  Pos
 }
 
 func NewLagoon() *Lagoon {
 	return &Lagoon{
-		Squares: map[Pos]bool{{X: 0, Y: 0}: true},
+		Corners: []Pos{{X: 0, Y: 0}},
 	}
 }
 
-func (l *Lagoon) DigSquare(pos Pos) {
-	l.Squares[pos] = true
-	// Add 1 offset to ensure there's an empty border all round
-	l.MinExtent.X = min(l.MinExtent.X, pos.X-1)
-	l.MinExtent.Y = min(l.MinExtent.Y, pos.Y-1)
-	l.MaxExtent.X = max(l.MaxExtent.X, pos.X+1)
-	l.MaxExtent.Y = max(l.MaxExtent.Y, pos.Y+1)
-}
-
-func (l *Lagoon) DigTrenches(digPlan []Instruction) {
-	for _, inst := range digPlan {
-		delta := inst.Dir.Delta()
-		for i := 0; i < inst.Length; i++ {
-			l.Digger = l.Digger.Add(delta)
-			l.DigSquare(l.Digger)
+func (l *Lagoon) FillCorners(digPlan []Instruction) {
+	for i, inst := range digPlan {
+		l.Digger = l.Digger.Add(inst.Delta())
+		if i == len(digPlan)-1 {
+			if l.Digger != (Pos{}) {
+				log.Fatalln("Final position not 0,0 - was", l.Digger)
+			}
+		} else {
+			l.Corners = append(l.Corners, l.Digger)
 		}
 	}
 }
 
-func (l *Lagoon) FillLoop() {
-	outsideSquares := map[Pos]bool{l.MinExtent: true}
-	candidates := []Pos{l.MinExtent}
-	for len(candidates) > 0 {
-		sq := candidates[0]
-		candidates = candidates[1:]
-
-		for _, neighbour := range []Pos{
-			{X: sq.X, Y: sq.Y + 1},
-			{X: sq.X, Y: sq.Y - 1},
-			{X: sq.X + 1, Y: sq.Y},
-			{X: sq.X - 1, Y: sq.Y},
-		} {
-			if neighbour.X < l.MinExtent.X || neighbour.X > l.MaxExtent.X ||
-				neighbour.Y < l.MinExtent.Y || neighbour.Y > l.MaxExtent.Y {
-				continue
-			}
-			if l.Squares[neighbour] {
-				continue
-			}
-			if outsideSquares[neighbour] {
-				// Previously looked at
-				continue
-			}
-			outsideSquares[neighbour] = true
-			candidates = append(candidates, neighbour)
-		}
+func (l *Lagoon) TotalArea() int {
+	// Shoelace + Pick's theorum
+	sum := 0
+	boundary := 0
+	p0 := l.Corners[len(l.Corners)-1]
+	for _, p1 := range l.Corners {
+		sum += p0.Y*p1.X - p0.X*p1.Y
+		boundary += p0.DistanceTo(p1)
+		p0 = p1
 	}
-
-	for y := l.MinExtent.Y; y <= l.MaxExtent.Y; y++ {
-		for x := l.MinExtent.X; x <= l.MaxExtent.X; x++ {
-			pos := Pos{X: x, Y: y}
-			if l.Squares[pos] || outsideSquares[pos] {
-				continue
-			}
-			l.DigSquare(pos)
-		}
-	}
+	//fmt.Printf("Sum: %d, boundary: %d\n", sum, boundary)
+	return sum/2 + boundary/2 + 1
 }
 
 func main() {
-	var instructions []Instruction
+	var instructions, instructions2 []Instruction
 	helpers.ScanLines(os.Stdin, func(line string) {
-		instructions = append(instructions, ParseInstruction(line))
+		inst1, inst2 := ParseInstruction(line)
+		instructions = append(instructions, inst1)
+		instructions2 = append(instructions2, inst2)
 	})
 
+	fmt.Println(instructions)
+	fmt.Println(instructions2)
+
 	lagoon := NewLagoon()
-	lagoon.DigTrenches(instructions)
+	lagoon.FillCorners(instructions)
+	//fmt.Println("Corners:", lagoon.Corners)
+	fmt.Println("Area:", lagoon.TotalArea())
 
-	fmt.Println(lagoon)
-
-	fmt.Println("Dug squares:", len(lagoon.Squares))
-
-	lagoon.FillLoop()
-
-	fmt.Println(lagoon)
-
-	fmt.Println("Extent:", lagoon.MinExtent, lagoon.MaxExtent)
-	fmt.Println("Dug squares:", len(lagoon.Squares))
+	// Part 2
+	lagoon = NewLagoon()
+	lagoon.FillCorners(instructions2)
+	//fmt.Println("Corners:", lagoon.Corners)
+	fmt.Println("Area 2:", lagoon.TotalArea())
 }

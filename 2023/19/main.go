@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"maps"
 	"os"
 	"regexp"
 	"strings"
@@ -85,6 +86,35 @@ func (r Rule) MatchPart(part Part) string {
 	return ""
 }
 
+func (r Rule) ConstrainPath(path *Path) (*Path, *Path) {
+	nextPath := &Path{}
+	*nextPath = *path // Shallow copy
+
+	nextPath.CurrentTarget = r.Target
+	if r.Operator == "" {
+		return nextPath, nil
+	}
+
+	remainingPath := &Path{}
+	*remainingPath = *path
+
+	nextPath.Constraints = maps.Clone(nextPath.Constraints)
+	remainingPath.Constraints = maps.Clone(remainingPath.Constraints)
+
+	constraint := nextPath.Constraints[r.Property]
+	remainingConstraint := remainingPath.Constraints[r.Property]
+	if r.Operator == ">" {
+		constraint.Min = max(constraint.Min, r.Value+1)
+		remainingConstraint.Max = min(remainingConstraint.Max, r.Value)
+	} else if r.Operator == "<" {
+		constraint.Max = min(constraint.Max, r.Value-1)
+		remainingConstraint.Min = max(remainingConstraint.Min, r.Value)
+	}
+	nextPath.Constraints[r.Property] = constraint
+	remainingPath.Constraints[r.Property] = remainingConstraint
+	return nextPath, remainingPath
+}
+
 type Part struct {
 	X int
 	M int
@@ -110,6 +140,7 @@ type System struct {
 	Instructions  map[string][]Rule
 	AcceptedParts []Part
 	RejectedParts []Part
+	AcceptedPaths []*Path
 }
 
 func (s *System) ProcessPart(part Part) {
@@ -147,18 +178,99 @@ func (s *System) AcceptedRatingTotal() int {
 	return total
 }
 
+type Constraint struct {
+	Min int
+	Max int
+}
+
+type Path struct {
+	CurrentTarget string
+	Constraints   map[string]Constraint
+}
+
+func (p Path) String() string {
+	return fmt.Sprintln("Target:", p.CurrentTarget, "Constraints:", p.Constraints["x"], p.Constraints["m"], p.Constraints["a"], p.Constraints["s"])
+}
+
+func (p Path) Possible() bool {
+	for _, c := range p.Constraints {
+		if c.Min > c.Max {
+			return false
+		}
+	}
+	return true
+}
+
+func (s *System) EvaluatePaths() {
+	candidates := []*Path{{
+		CurrentTarget: "in",
+		Constraints: map[string]Constraint{
+			"x": {Min: 1, Max: 4000},
+			"m": {Min: 1, Max: 4000},
+			"a": {Min: 1, Max: 4000},
+			"s": {Min: 1, Max: 4000},
+		},
+	}}
+
+	for len(candidates) > 0 {
+		path := candidates[0]
+		candidates = candidates[1:]
+
+		//fmt.Print("Considering:", path)
+
+		for _, rule := range s.Instructions[path.CurrentTarget] {
+			if path == nil {
+				// Should never happen - means we got a rule without constraints that wasn't the last rule
+				break
+			}
+			nextPath, remainingPath := rule.ConstrainPath(path)
+			// Evaluate following rules only against constraints that don't match this rule
+			path = remainingPath
+			if rule.Target == "R" {
+				// Nothing more to evaluate from this rule
+				continue
+			}
+			if !nextPath.Possible() {
+				fmt.Print("Discarding impossible nextPath:", nextPath)
+				continue
+			}
+			if nextPath.CurrentTarget == "A" {
+				s.AcceptedPaths = append(s.AcceptedPaths, nextPath)
+				continue
+			}
+			candidates = append(candidates, nextPath)
+		}
+	}
+}
+
+func (s *System) DistinctTotalRatings() int {
+	total := 0
+	for _, path := range s.AcceptedPaths {
+		combinations := 1
+		for _, c := range path.Constraints {
+			combinations *= c.Max - (c.Min - 1)
+		}
+		total += combinations
+	}
+	return total
+}
+
 func main() {
 	inCh := helpers.StreamLines(os.Stdin)
 
 	instructions := ParseInstructions(inCh)
-	fmt.Println(instructions)
+	//fmt.Println(instructions)
 
 	parts := ParseParts(inCh)
-	fmt.Println(parts)
+	//fmt.Println(parts)
 
 	s := &System{Instructions: instructions}
 	s.ProcessParts(parts)
 	fmt.Println("Accepted:", s.AcceptedParts)
 	fmt.Println("Rejected:", s.RejectedParts)
 	fmt.Println("AcceptedRatingTotal:", s.AcceptedRatingTotal())
+
+	s.EvaluatePaths()
+	fmt.Println(s.AcceptedPaths)
+	fmt.Println("Non-Distinct rating combinations:", s.DistinctTotalRatings())
 }

@@ -20,3 +20,22 @@ func Max(a, b int) int {
 	}
 	return b
 }
+
+func GreatestCommonDivisor(a, b int) int {
+	for b != 0 {
+		a, b = b, a%b
+	}
+	return a
+}
+
+func LeastCommonMultiple(numbers ...int) int {
+	if len(numbers) < 2 {
+		return numbers[0]
+	}
+	a, b, rest := numbers[0], numbers[1], numbers[2:]
+	res := a * b / GreatestCommonDivisor(a, b)
+	for _, next := range rest {
+		res = LeastCommonMultiple(res, next)
+	}
+	return res
+}

@@ -87,21 +87,6 @@ func (g Graph) nextNCounts(instructions string, startNode *Node, n int) []int {
 	return counts
 }
 
-func gcm(a, b int) int {
-	for b != 0 {
-		a, b = b, a%b
-	}
-	return a
-}
-
-func lcm(a, b int, rest ...int) int {
-	res := a * b / gcm(a, b)
-	for _, next := range rest {
-		res = lcm(res, next)
-	}
-	return res
-}
-
 func (g Graph) moveCountWithGhosts(instructions string) int {
 	var startingSet []*Node
 	for label, node := range g {
@@ -131,7 +116,7 @@ func (g Graph) moveCountWithGhosts(instructions string) int {
 	}
 	fmt.Println("Loop lengths:", loopLengths)
 
-	return lcm(loopLengths[0], loopLengths[1], loopLengths[2:]...)
+	return helpers.LeastCommonMultiple(loopLengths...)
 }
 
 func main() {

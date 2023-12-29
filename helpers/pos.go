@@ -33,3 +33,12 @@ func (p Pos) Add(delta Pos) Pos {
 		Y: p.Y + delta.Y,
 	}
 }
+
+func (p Pos) Neighbours() []Pos {
+	return []Pos{
+		{X: p.X + 1, Y: p.Y},
+		{X: p.X - 1, Y: p.Y},
+		{X: p.X, Y: p.Y + 1},
+		{X: p.X, Y: p.Y - 1},
+	}
+}

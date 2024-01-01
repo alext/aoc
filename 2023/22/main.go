@@ -164,29 +164,28 @@ func (s *Stack) Settle() {
 	slices.SortFunc(s.Bricks, func(a, b *Brick) int { return cmp.Compare(a.Pos1.Z, b.Pos1.Z) })
 }
 
-func (s *Stack) WouldReSettleWithout(removedBrick *Brick) bool {
-	for _, brick := range s.Bricks {
-		if brick == removedBrick {
-			continue
-		}
+func (s *Stack) ChainReactionSize(removedBrick *Brick) int {
+	movedBricks := map[*Brick]bool{removedBrick: true}
+	for i := slices.Index(s.Bricks, removedBrick) + 1; i < len(s.Bricks); i++ {
+		brick := s.Bricks[i]
 		if brick.Pos1.Z == 1 {
 			// On floor...
 			continue
 		}
-
-		allClear := true
+		willFall := true
 		for _, pos := range brick.PositionsBelow() {
 			b := s.Grid[pos]
-			if b != nil && b != removedBrick {
-				allClear = false
+			if b != nil && !movedBricks[b] {
+				willFall = false
 				break
 			}
 		}
-		if allClear {
-			return true
+		if !willFall {
+			continue
 		}
+		movedBricks[brick] = true
 	}
-	return false
+	return len(movedBricks) - 1 // -1 so as to not include initial disingegrated one
 }
 
 func main() {
@@ -203,10 +202,14 @@ func main() {
 	}
 
 	stableCount := 0
+	totalChainReactionSize := 0
 	for _, brick := range s.Bricks {
-		if !s.WouldReSettleWithout(brick) {
+		count := s.ChainReactionSize(brick)
+		totalChainReactionSize += count
+		if count == 0 {
 			stableCount++
 		}
 	}
 	fmt.Println("Stable bricks:", stableCount)
+	fmt.Println("Total chain reaction size:", totalChainReactionSize)
 }

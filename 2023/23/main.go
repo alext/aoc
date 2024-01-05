@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"slices"
+	"sync"
 
 	"github.com/alext/aoc/helpers"
 )
@@ -75,6 +76,7 @@ type Path struct {
 type Node struct {
 	Location Pos
 	OutPaths []*Path
+	InPaths  []*Path
 }
 
 type Graph struct {
@@ -120,6 +122,7 @@ func BuildGraph(m *Map) *Graph {
 			Steps: stepCount,
 		}
 		path.Start.OutPaths = append(path.Start.OutPaths, path)
+		path.End.InPaths = append(path.End.InPaths, path)
 
 		if !existing {
 			for _, pos := range m.NodeExits(nodePos) {
@@ -159,11 +162,16 @@ type Route struct {
 	TotalSteps int
 }
 
+var routePool = sync.Pool{
+	New: func() any { return &Route{} },
+}
+
 func (r *Route) Clone() *Route {
-	clone := &Route{}
-	*clone = *r
-	clone.Nodes = slices.Clone(r.Nodes)
-	clone.Paths = slices.Clone(r.Paths)
+	clone := routePool.Get().(*Route)
+	clone.Current = nil
+	clone.Nodes = append(clone.Nodes[:0], r.Nodes...)
+	clone.Paths = append(clone.Paths[:0], r.Paths...)
+	clone.TotalSteps = r.TotalSteps
 	return clone
 }
 
@@ -181,12 +189,42 @@ func (r *Route) NextHops() []*Route {
 	return routes
 }
 
-func (g *Graph) LongestPath() *Route {
+func (r *Route) NextHopsUndirected() []*Route {
+	var routes []*Route
+
+	addPath := func(path *Path, outbound bool) {
+		var nextNode *Node
+		if outbound {
+			nextNode = path.End
+		} else {
+			nextNode = path.Start
+		}
+		if slices.Contains(r.Nodes, nextNode) {
+			return
+		}
+		next := r.Clone()
+		next.Current = nextNode
+		next.Nodes = append(next.Nodes, nextNode)
+		next.Paths = append(next.Paths, path)
+		next.TotalSteps += path.Steps + 1 // +1 for the node
+
+		routes = append(routes, next)
+	}
+
+	for _, path := range r.Current.OutPaths {
+		addPath(path, true)
+	}
+	for _, path := range r.Current.InPaths {
+		addPath(path, false)
+	}
+	return routes
+}
+
+func (g *Graph) LongestPath(undirected bool) *Route {
 	routes := []*Route{
 		{
 			Current: g.Start,
 			Nodes:   []*Node{g.Start},
-			//TotalSteps: 1,
 		},
 	}
 	var bestRoute *Route
@@ -194,15 +232,27 @@ func (g *Graph) LongestPath() *Route {
 		route := routes[0]
 		routes = routes[1:]
 
-		for _, next := range route.NextHops() {
+		var nextHops []*Route
+		if undirected {
+			nextHops = route.NextHopsUndirected()
+		} else {
+			nextHops = route.NextHops()
+		}
+		for _, next := range nextHops {
 			if next.Current == g.End {
 				if bestRoute == nil || next.TotalSteps > bestRoute.TotalSteps {
+					if bestRoute != nil {
+						routePool.Put(bestRoute)
+					}
 					bestRoute = next
+				} else {
+					routePool.Put(next)
 				}
 				continue
 			}
 			routes = append(routes, next)
 		}
+		routePool.Put(route)
 	}
 	return bestRoute
 }
@@ -215,6 +265,9 @@ func main() {
 
 	//graph.ToDot()
 
-	r := graph.LongestPath()
+	r := graph.LongestPath(false)
 	fmt.Println("Longest path length:", r.TotalSteps)
+
+	r = graph.LongestPath(true)
+	fmt.Println("Longest undirected path length:", r.TotalSteps)
 }

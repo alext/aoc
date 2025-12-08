@@ -23,8 +23,9 @@ const _HandType_name = "UnknownHighCardOnePairTwoPairThreeOfAKindFullHouseFourOf
 var _HandType_index = [...]uint8{0, 7, 15, 22, 29, 41, 50, 61, 72}
 
 func (i HandType) String() string {
-	if i < 0 || i >= HandType(len(_HandType_index)-1) {
+	idx := int(i) - 0
+	if i < 0 || idx >= len(_HandType_index)-1 {
 		return "HandType(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _HandType_name[_HandType_index[i]:_HandType_index[i+1]]
+	return _HandType_name[_HandType_index[idx]:_HandType_index[idx+1]]
 }

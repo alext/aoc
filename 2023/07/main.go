@@ -55,7 +55,7 @@ func (c Card) String() string {
 	}
 }
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type HandType
+//go:generate go tool stringer -type HandType
 type HandType int
 
 const (

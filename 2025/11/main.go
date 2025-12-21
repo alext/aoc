@@ -25,15 +25,54 @@ func (n Network) GetOrCreateNode(label string) *Node {
 	return node
 }
 
-func (n Network) CountRoutesFrom(node *Node) int {
+func (n Network) countRoutes(from *Node, toLabel string, cache map[string]int) int {
+	if from == nil {
+		return 0
+	}
+	if count, ok := cache[from.Label]; ok {
+		return count
+	}
 	count := 0
-	for _, conn := range node.Connections {
-		if conn.Label == "out" {
+	for _, conn := range from.Connections {
+		if conn.Label == toLabel {
 			count++
 			continue
 		}
-		count += n.CountRoutesFrom(conn)
+		count += n.countRoutes(conn, toLabel, cache)
 	}
+	cache[from.Label] = count
+	return count
+}
+
+func (n Network) CountRoutes(fromLabel, toLabel string) int {
+	from := n[fromLabel]
+	cache := make(map[string]int)
+	return n.countRoutes(from, toLabel, cache)
+}
+
+func (n Network) CountRoutes1() int {
+	return n.CountRoutes("you", "out")
+}
+
+func (n Network) CountRoutes2() int {
+	svr2dac := n.CountRoutes("svr", "dac")
+	fmt.Println("svr2dac:", svr2dac)
+	svr2fft := n.CountRoutes("svr", "fft")
+	fmt.Println("svr2dac:", svr2fft)
+
+	dac2fft := n.CountRoutes("dac", "fft")
+	fmt.Println("dac2fft:", dac2fft)
+	fft2dac := n.CountRoutes("fft", "dac")
+	fmt.Println("fft2dac:", fft2dac)
+
+	dac2out := n.CountRoutes("dac", "out")
+	fmt.Println("dac2out:", dac2out)
+	fft2out := n.CountRoutes("fft", "out")
+	fmt.Println("fft2out:", fft2out)
+
+	count := 0
+	count += svr2dac * dac2fft * fft2out
+	count += svr2fft * fft2dac * dac2out
 	return count
 }
 
@@ -52,5 +91,6 @@ func main() {
 		}
 	})
 
-	fmt.Println("Routes", network.CountRoutesFrom(network["you"]))
+	fmt.Println("Routes", network.CountRoutes1())
+	fmt.Println("Routes2", network.CountRoutes2())
 }
